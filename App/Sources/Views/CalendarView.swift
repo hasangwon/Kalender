@@ -3,7 +3,6 @@ import SwiftUI
 import WidgetKit
 
 struct CalendarView: View {
-    @EnvironmentObject private var auth: AuthManager
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Schedule.createdAt) private var schedules: [Schedule]
 
@@ -27,18 +26,6 @@ struct CalendarView: View {
             .navigationTitle("일정위젯")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Menu {
-                        if !auth.displayName.isEmpty {
-                            Text(auth.displayName)
-                        }
-                        Button("로그아웃", role: .destructive) {
-                            auth.signOut()
-                        }
-                    } label: {
-                        Image(systemName: "person.circle")
-                    }
-                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         isAddingSchedule = true

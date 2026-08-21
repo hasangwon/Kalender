@@ -23,7 +23,6 @@ targets:
     entitlements:
       path: App/PlanWidget.entitlements
       properties:
-        com.apple.developer.applesignin: [Default]
         com.apple.security.application-groups: [group.com.hasangwon.planwidget]
     info:
       path: App/Info.plist
