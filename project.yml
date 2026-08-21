@@ -16,6 +16,9 @@ targets:
   PlanWidget:
     type: application
     platform: iOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hasangwon.planwidget
     sources:
       - App/Sources
       - App/Resources
