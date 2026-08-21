@@ -1,0 +1,56 @@
+name: PlanWidget
+options:
+  bundleIdPrefix: com.hasangwon
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    CODE_SIGN_STYLE: Automatic
+    CURRENT_PROJECT_VERSION: 1
+    MARKETING_VERSION: 1.0.0
+    # 팀 설정 후 주석 해제하거나 Xcode Signing 탭에서 선택
+    # DEVELOPMENT_TEAM: XXXXXXXXXX
+targets:
+  PlanWidget:
+    type: application
+    platform: iOS
+    sources:
+      - App/Sources
+      - App/Resources
+      - Shared/Sources
+    entitlements:
+      path: App/PlanWidget.entitlements
+      properties:
+        com.apple.developer.applesignin: [Default]
+        com.apple.security.application-groups: [group.com.hasangwon.planwidget]
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: 일정위젯
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        ITSAppUsesNonExemptEncryption: false
+    dependencies:
+      - target: PlanWidgetExtension
+        embed: true
+  PlanWidgetExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Widget/Sources
+      - Shared/Sources
+    entitlements:
+      path: Widget/PlanWidgetExtension.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.hasangwon.planwidget]
+    info:
+      path: Widget/Info.plist
+      properties:
+        CFBundleDisplayName: 일정위젯
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hasangwon.planwidget.widget

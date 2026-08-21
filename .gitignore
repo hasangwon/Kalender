@@ -1,0 +1,10 @@
+# XcodeGen이 생성 (xcodegen generate로 재생성)
+*.xcodeproj
+
+# Xcode
+xcuserdata/
+DerivedData/
+*.xcresult
+
+# macOS
+.DS_Store
