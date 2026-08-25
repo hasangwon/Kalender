@@ -1,0 +1,68 @@
+{
+  "identifier" : "A1B2C3D4",
+  "nonRenewingSubscriptions" : [],
+  "products" : [
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
+      "internalID" : "REMOVEADS001",
+      "localizations" : [
+        { "description" : "하단 배너 광고를 영구히 제거합니다.", "displayName" : "광고 제거", "locale" : "ko_KR" }
+      ],
+      "productID" : "com.hasangwon.planwidget.removeads",
+      "referenceName" : "광고 제거",
+      "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
+      "internalID" : "TIP1000",
+      "localizations" : [
+        { "description" : "커피 한 모금 후원", "displayName" : "후원 1,000원", "locale" : "ko_KR" }
+      ],
+      "productID" : "com.hasangwon.planwidget.tip.1000",
+      "referenceName" : "후원 1000",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "TIP5000",
+      "localizations" : [
+        { "description" : "커피 한 잔 후원", "displayName" : "후원 5,000원", "locale" : "ko_KR" }
+      ],
+      "productID" : "com.hasangwon.planwidget.tip.5000",
+      "referenceName" : "후원 5000",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "TIP10000",
+      "localizations" : [
+        { "description" : "든든한 한 끼 후원", "displayName" : "후원 10,000원", "locale" : "ko_KR" }
+      ],
+      "productID" : "com.hasangwon.planwidget.tip.10000",
+      "referenceName" : "후원 10000",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "99.99",
+      "familyShareable" : false,
+      "internalID" : "TIP100000",
+      "localizations" : [
+        { "description" : "전설의 후원자", "displayName" : "후원 100,000원", "locale" : "ko_KR" }
+      ],
+      "productID" : "com.hasangwon.planwidget.tip.100000",
+      "referenceName" : "후원 100000",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "1234567890",
+    "_developerTeamID" : "TWTRVUW4YN",
+    "_lastSynchronizedDate" : 0
+  },
+  "subscriptionGroups" : [],
+  "version" : { "major" : 3, "minor" : 0 }
+}

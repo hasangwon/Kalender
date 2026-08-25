@@ -10,8 +10,11 @@ settings:
     CODE_SIGN_STYLE: Automatic
     CURRENT_PROJECT_VERSION: 1
     MARKETING_VERSION: 1.0.0
-    # 팀 설정 후 주석 해제하거나 Xcode Signing 탭에서 선택
-    # DEVELOPMENT_TEAM: XXXXXXXXXX
+    DEVELOPMENT_TEAM: TWTRVUW4YN
+    # Xcode 권장 설정 반영 (Update to recommended settings 알림 제거)
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOL_EXTENSIONS: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
 targets:
   PlanWidget:
     type: application
@@ -19,21 +22,30 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.hasangwon.planwidget
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
     sources:
       - App/Sources
       - App/Resources
       - Shared/Sources
+      - path: PlanWidget.storekit
+        buildPhase: none
     entitlements:
       path: App/PlanWidget.entitlements
       properties:
         com.apple.security.application-groups: [group.com.hasangwon.planwidget]
+        com.apple.developer.icloud-container-identifiers: [iCloud.com.hasangwon.planwidget]
+        com.apple.developer.icloud-services: [CloudKit]
+        aps-environment: development
     info:
       path: App/Info.plist
       properties:
-        CFBundleDisplayName: 일정위젯
+        CFBundleDisplayName: Kalender
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIRequiresFullScreen: true
         ITSAppUsesNonExemptEncryption: false
+        UIBackgroundModes: [remote-notification]
+        NSCalendarsFullAccessUsageDescription: "애플 기본 달력의 일정을 Kalender에 함께 보여주기 위해 달력 접근이 필요합니다. (읽기 전용)"
     dependencies:
       - target: PlanWidgetExtension
         embed: true
@@ -47,12 +59,31 @@ targets:
       path: Widget/PlanWidgetExtension.entitlements
       properties:
         com.apple.security.application-groups: [group.com.hasangwon.planwidget]
+        com.apple.developer.icloud-container-identifiers: [iCloud.com.hasangwon.planwidget]
+        com.apple.developer.icloud-services: [CloudKit]
     info:
       path: Widget/Info.plist
       properties:
-        CFBundleDisplayName: 일정위젯
+        CFBundleDisplayName: Kalender
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.hasangwon.planwidget.widget
+
+schemes:
+  PlanWidget:
+    build:
+      targets:
+        PlanWidget: all
+    run:
+      config: Debug
+      storeKitConfiguration: PlanWidget.storekit
+    test:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

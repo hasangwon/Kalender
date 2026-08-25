@@ -3,24 +3,39 @@ import SwiftData
 
 enum ScheduleStore {
     /// 앱/위젯 공용 SwiftData 컨테이너.
-    /// App Group 컨테이너를 우선 사용하고, 엔타이틀먼트가 없으면(개발 초기 등) 로컬 저장소로 폴백합니다.
+    /// 우선순위: App Group + iCloud(CloudKit) → App Group(로컬) → 로컬.
+    /// iCloud 엔타이틀먼트/계정이 없으면(무료 계정·시뮬레이터 등) 자동으로 로컬 저장으로 폴백합니다.
     static func makeContainer() -> ModelContainer {
-        let schema = Schema([Schedule.self])
+        let schema = Schema([Schedule.self, AnniversaryEntry.self])
 
         let hasAppGroup = FileManager.default
             .containerURL(forSecurityApplicationGroupIdentifier: SharedConstants.appGroupID) != nil
 
         if hasAppGroup {
+            // 1) App Group + CloudKit — 엔타이틀먼트 존재 플래그 AND 사용자가 켰을 때만.
+            //    엔타이틀먼트 없이 CloudKit 을 요청하면 실기기에서 크래시하므로 플래그로 막는다.
+            if SharedConstants.iCloudSyncEnabled && SyncSettings.iCloudEnabled {
+                let cloudConfig = ModelConfiguration(
+                    schema: schema,
+                    groupContainer: .identifier(SharedConstants.appGroupID),
+                    cloudKitDatabase: .private(SharedConstants.iCloudContainerID)
+                )
+                if let container = try? ModelContainer(for: schema, configurations: [cloudConfig]) {
+                    return container
+                }
+            }
+
+            // 2) App Group만 (동기화 없이 앱↔위젯 공유)
             let groupConfig = ModelConfiguration(
                 schema: schema,
                 groupContainer: .identifier(SharedConstants.appGroupID)
             )
-
             if let container = try? ModelContainer(for: schema, configurations: [groupConfig]) {
                 return container
             }
         }
 
+        // 3) 로컬 (개발 초기·엔타이틀먼트 없음)
         let localConfig = ModelConfiguration(schema: schema)
 
         do {

@@ -15,7 +15,12 @@ struct ScheduleFormView: View {
     @State private var hasTime: Bool
     @State private var time: Date
     @State private var recurrence: Recurrence
-    @State private var colorTag: ColorTag
+    @State private var notifies: Bool
+    @State private var hasEndDate: Bool
+    @State private var endDate: Date
+    /// nil이면 유형 기본 색을 따름
+    @State private var pickedColor: ColorTag?
+    @State private var isColorExpanded = false
     @State private var isConfirmingDelete = false
 
     private let calendar = Calendar.current
@@ -28,7 +33,10 @@ struct ScheduleFormView: View {
         _hasTime = State(initialValue: false)
         _time = State(initialValue: Self.defaultTime)
         _recurrence = State(initialValue: .none)
-        _colorTag = State(initialValue: .blue)
+        _notifies = State(initialValue: false)
+        _hasEndDate = State(initialValue: false)
+        _endDate = State(initialValue: defaultDate)
+        _pickedColor = State(initialValue: nil)
     }
 
     init(schedule: Schedule) {
@@ -39,7 +47,10 @@ struct ScheduleFormView: View {
         _hasTime = State(initialValue: schedule.hasTime)
         _time = State(initialValue: schedule.hasTime ? schedule.startDate : Self.defaultTime)
         _recurrence = State(initialValue: schedule.recurrence)
-        _colorTag = State(initialValue: schedule.color)
+        _notifies = State(initialValue: schedule.notifies)
+        _hasEndDate = State(initialValue: schedule.endDate != nil)
+        _endDate = State(initialValue: schedule.endDate ?? schedule.startDate)
+        _pickedColor = State(initialValue: schedule.hasCustomColor ? schedule.color : nil)
     }
 
     private static var defaultTime: Date {
@@ -67,6 +78,15 @@ struct ScheduleFormView: View {
                     if hasTime {
                         DatePicker("시간", selection: $time, displayedComponents: .hourAndMinute)
                     }
+
+                    Toggle("알림 받기", isOn: $notifies)
+                        .onChange(of: notifies) { _, isOn in
+                            if isOn {
+                                NotificationManager.requestAuthorizationIfNeeded()
+                            }
+                        }
+                } footer: {
+                    Text(notifies ? "이 일정이 있는 날, 설정한 시간에 하루 일정을 모아 알려드려요." : "")
                 }
 
                 Section {
@@ -76,35 +96,80 @@ struct ScheduleFormView: View {
                         }
                     }
                     .pickerStyle(.segmented)
+
+                    // 매주/매달 반복에서만 종료일 지정 가능
+                    if recurrence != .none {
+                        Toggle("종료 날짜 지정", isOn: $hasEndDate.animation())
+
+                        if hasEndDate {
+                            DatePicker(
+                                "종료 날짜",
+                                selection: $endDate,
+                                in: date...,
+                                displayedComponents: .date
+                            )
+                        }
+                    }
                 } header: {
                     Text("반복")
                 } footer: {
                     Text(recurrenceFooter)
                 }
+                .onChange(of: date) { _, newDate in
+                    // 종료일은 시작일보다 앞설 수 없음
+                    if endDate < newDate { endDate = newDate }
+                }
+                .onChange(of: recurrence) { _, newValue in
+                    if newValue == .none { hasEndDate = false }
+                }
 
-                Section("색상") {
-                    HStack(spacing: 14) {
-                        ForEach(ColorTag.allCases) { tag in
-                            Button {
-                                colorTag = tag
-                            } label: {
-                                Circle()
-                                    .fill(tag.color)
-                                    .frame(width: 30, height: 30)
-                                    .overlay {
-                                        if colorTag == tag {
-                                            Image(systemName: "checkmark")
-                                                .font(.caption.bold())
-                                                .foregroundStyle(.white)
-                                        }
-                                    }
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel(tag.label)
+                Section {
+                    Button {
+                        withAnimation(.snappy(duration: 0.2)) { isColorExpanded.toggle() }
+                    } label: {
+                        HStack {
+                            Text("표시 색")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Circle()
+                                .fill(effectiveColor.color)
+                                .frame(width: 16, height: 16)
+                            Image(systemName: "chevron.down")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(.tertiary)
+                                .rotationEffect(.degrees(isColorExpanded ? 180 : 0))
                         }
+                        .contentShape(Rectangle())
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 4)
+                    .buttonStyle(.plain)
+
+                    if isColorExpanded {
+                        HStack(spacing: 10) {
+                            ForEach(ColorTag.allCases) { tag in
+                                Button {
+                                    // 유형 기본 색을 고르면 "기본 따름"으로 되돌림
+                                    pickedColor = tag == typeDefaultColor ? nil : tag
+                                } label: {
+                                    Circle()
+                                        .fill(tag.color)
+                                        .frame(width: 28, height: 28)
+                                        .overlay {
+                                            if effectiveColor == tag {
+                                                Image(systemName: "checkmark")
+                                                    .font(.caption2.bold())
+                                                    .foregroundStyle(.white)
+                                            }
+                                        }
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel(tag.label)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 4)
+                    }
+                } footer: {
+                    Text(pickedColor == nil ? "일정 유형의 기본 색을 따르고 있습니다." : "이 일정만 개별 색을 사용합니다.")
                 }
 
                 if isEditing {
@@ -116,6 +181,8 @@ struct ScheduleFormView: View {
                     }
                 }
             }
+            .fontDesign(.rounded)
+            .dynamicTypeSize(TextSizeSettings.current.dynamicTypeSize)
             .navigationTitle(isEditing ? "일정 수정" : "새 일정")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -136,6 +203,14 @@ struct ScheduleFormView: View {
             }
         }
         .presentationDetents([.large])
+    }
+
+    private var typeDefaultColor: ColorTag {
+        EventColorSettings.color(for: recurrence)
+    }
+
+    private var effectiveColor: ColorTag {
+        pickedColor ?? typeDefaultColor
     }
 
     private var recurrenceFooter: String {
@@ -169,13 +244,22 @@ struct ScheduleFormView: View {
     }
 
     private func save() {
+        // 종료일: 반복 일정 + 지정 시에만, 시작일 이전 방지
+        let resolvedEndDate: Date? = (recurrence != .none && hasEndDate)
+            ? calendar.startOfDay(for: max(endDate, date))
+            : nil
+        let usesCustomColor = pickedColor != nil
+
         if let schedule = editingSchedule {
             schedule.title = trimmedTitle
             schedule.memo = memo.trimmingCharacters(in: .whitespacesAndNewlines)
             schedule.startDate = resolvedStartDate
             schedule.hasTime = hasTime
             schedule.recurrence = recurrence
-            schedule.color = colorTag
+            schedule.endDate = resolvedEndDate
+            schedule.hasCustomColor = usesCustomColor
+            schedule.color = pickedColor ?? typeDefaultColor
+            schedule.notifies = notifies
         } else {
             let schedule = Schedule(
                 title: trimmedTitle,
@@ -183,13 +267,17 @@ struct ScheduleFormView: View {
                 startDate: resolvedStartDate,
                 hasTime: hasTime,
                 recurrence: recurrence,
-                color: colorTag
+                color: pickedColor ?? typeDefaultColor,
+                endDate: resolvedEndDate,
+                hasCustomColor: usesCustomColor,
+                notifies: notifies
             )
             modelContext.insert(schedule)
         }
 
         try? modelContext.save()
         WidgetCenter.shared.reloadAllTimelines()
+        NotificationManager.refresh(context: modelContext)
         dismiss()
     }
 
@@ -199,6 +287,7 @@ struct ScheduleFormView: View {
         modelContext.delete(schedule)
         try? modelContext.save()
         WidgetCenter.shared.reloadAllTimelines()
+        NotificationManager.refresh(context: modelContext)
         dismiss()
     }
 }

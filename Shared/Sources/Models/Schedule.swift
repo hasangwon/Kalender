@@ -26,18 +26,25 @@ enum Recurrence: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+// CloudKit 동기화 요건: @Attribute(.unique) 사용 불가, 모든 속성에 기본값 필요.
 @Model
 final class Schedule {
-    @Attribute(.unique) var id: UUID
-    var title: String
-    var memo: String
+    var id: UUID = UUID()
+    var title: String = ""
+    var memo: String = ""
     /// 기준 날짜. 반복 일정이면 반복의 시작일이자 요일/일자의 기준.
-    var startDate: Date
+    var startDate: Date = Date.now
     /// true면 startDate의 시각 정보를 사용, false면 종일 일정
-    var hasTime: Bool
-    var recurrenceRaw: String
-    var colorRaw: String
-    var createdAt: Date
+    var hasTime: Bool = false
+    var recurrenceRaw: String = Recurrence.none.rawValue
+    var colorRaw: String = ColorTag.blue.rawValue
+    /// 반복 종료일 (포함). nil이면 무제한. 단일 일정은 항상 nil.
+    var endDate: Date?
+    /// true면 colorRaw의 개별 색 사용, false면 유형 기본 색을 따름
+    var hasCustomColor: Bool = false
+    /// 하루 일괄 알림 대상 여부
+    var notifies: Bool = false
+    var createdAt: Date = Date.now
 
     var recurrence: Recurrence {
         get { Recurrence(rawValue: recurrenceRaw) ?? .none }
@@ -55,7 +62,10 @@ final class Schedule {
         startDate: Date,
         hasTime: Bool = false,
         recurrence: Recurrence = .none,
-        color: ColorTag = .blue
+        color: ColorTag = .blue,
+        endDate: Date? = nil,
+        hasCustomColor: Bool = false,
+        notifies: Bool = false
     ) {
         self.id = UUID()
         self.title = title
@@ -64,7 +74,15 @@ final class Schedule {
         self.hasTime = hasTime
         self.recurrenceRaw = recurrence.rawValue
         self.colorRaw = color.rawValue
+        self.endDate = endDate
+        self.hasCustomColor = hasCustomColor
+        self.notifies = notifies
         self.createdAt = .now
+    }
+
+    /// 실제 표시 색 — 개별 지정이 없으면 유형 기본 색
+    var displayColor: ColorTag {
+        hasCustomColor ? color : EventColorSettings.color(for: recurrence)
     }
 
     /// 해당 날짜에 이 일정이 발생하는지
@@ -73,6 +91,11 @@ final class Schedule {
         let baseStart = calendar.startOfDay(for: startDate)
 
         guard dayStart >= baseStart else { return false }
+
+        // 반복 종료일 (포함) 이후에는 발생하지 않음
+        if let endDate, dayStart > calendar.startOfDay(for: endDate) {
+            return false
+        }
 
         switch recurrence {
         case .none:
