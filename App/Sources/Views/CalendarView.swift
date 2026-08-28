@@ -6,7 +6,6 @@ struct CalendarView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Schedule.createdAt) private var schedules: [Schedule]
     @Query(sort: \AnniversaryEntry.createdAt) private var anniversaries: [AnniversaryEntry]
-    @EnvironmentObject private var donation: DonationManager
     @EnvironmentObject private var appleCalendar: AppleCalendarManager
 
     @State private var displayedMonth: Date = Calendar.current.startOfMonth(for: .now)
@@ -55,8 +54,6 @@ struct CalendarView: View {
 
                 daySection
                     .frame(height: 220)
-
-                AdBannerView(adsRemoved: donation.adsRemoved)
             }
             .background(AppTheme.background)
             .fontDesign(.rounded)
@@ -79,7 +76,7 @@ struct CalendarView: View {
                 SettingsView()
             }
             .sheet(isPresented: $isShowingInfo) {
-                InfoView(donation: donation)
+                InfoView()
             }
             .sheet(isPresented: $isShowingSync) {
                 SyncView()

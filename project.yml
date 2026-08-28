@@ -8,7 +8,7 @@ settings:
   base:
     SWIFT_VERSION: "5.10"
     CODE_SIGN_STYLE: Automatic
-    CURRENT_PROJECT_VERSION: 1
+    CURRENT_PROJECT_VERSION: 5
     MARKETING_VERSION: 1.0.0
     DEVELOPMENT_TEAM: TWTRVUW4YN
     # Xcode 권장 설정 반영 (Update to recommended settings 알림 제거)
@@ -27,8 +27,6 @@ targets:
       - App/Sources
       - App/Resources
       - Shared/Sources
-      - path: PlanWidget.storekit
-        buildPhase: none
     entitlements:
       path: App/PlanWidget.entitlements
       properties:
@@ -78,7 +76,6 @@ schemes:
         PlanWidget: all
     run:
       config: Debug
-      storeKitConfiguration: PlanWidget.storekit
     test:
       config: Debug
     profile:
