@@ -2,9 +2,7 @@
 
 # 📅 Kalender
 
-**음력과 한국 공휴일을 지원하는 iOS 캘린더 · 위젯 앱**
-
-광고 없음 · 인앱결제 없음 · 완전 무료
+**음력과 한국 공휴일을 지원하는 iOS 무료 캘린더 · 위젯 앱**
 
 ![iOS](https://img.shields.io/badge/iOS-17.0+-000000?logo=apple&logoColor=white)
 ![Swift](https://img.shields.io/badge/Swift-5.10-FA7343?logo=swift&logoColor=white)
@@ -56,7 +54,7 @@
 
 - **SwiftUI · SwiftData · WidgetKit · EventKit**
 - **iOS 17+**
-- 프로젝트 생성: [XcodeGen](https://github.com/yonaskolb/XcodeGen) — `project.yml`이 원본
+- 프로젝트 생성: [XcodeGen](https://github.com/yonaskolb/XcodeGen) 
 
 ---
 
@@ -67,8 +65,6 @@ brew install xcodegen        # 최초 1회
 xcodegen generate            # PlanWidget.xcodeproj 생성
 open PlanWidget.xcodeproj
 ```
-
-Xcode에서 Team 서명 후 실행합니다. `.xcodeproj`는 생성물이라 git에서 제외됩니다.
 
 ---
 
