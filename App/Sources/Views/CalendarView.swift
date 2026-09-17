@@ -22,6 +22,8 @@ struct CalendarView: View {
     @State private var textSize = TextSizeSettings.current
     /// 설정 시트에서 색을 바꾸면 달력을 다시 그리기 위한 트리거
     @State private var colorRefreshID = UUID()
+    /// 월 전환 슬라이드 방향 (true = 다음 달, 오른쪽에서 들어옴)
+    @State private var slideForward = true
 
     private let calendar = Calendar.current
 
@@ -83,10 +85,7 @@ struct CalendarView: View {
             }
             .sheet(isPresented: $isShowingSearch) {
                 SearchView { targetDate in
-                    withAnimation(.snappy(duration: 0.2)) {
-                        displayedMonth = calendar.startOfMonth(for: targetDate)
-                        selectedDate = calendar.startOfDay(for: targetDate)
-                    }
+                    setMonth(targetDate, alsoSelect: targetDate)
                 }
             }
         }
@@ -139,7 +138,7 @@ struct CalendarView: View {
 
             Spacer()
 
-            Text("Kalender")
+            Text("달력")
                 .font(.system(size: toolbarTitleSize, weight: .heavy, design: .rounded))
                 .foregroundStyle(AppTheme.primary)
 
@@ -211,10 +210,7 @@ struct CalendarView: View {
         .padding(.bottom, monthHeaderVerticalPadding + 4)
         .sheet(isPresented: $isShowingMonthPicker) {
             MonthYearPickerView(displayedMonth: displayedMonth) { picked in
-                withAnimation(.snappy(duration: 0.2)) {
-                    displayedMonth = calendar.startOfMonth(for: picked)
-                }
-                appleCalendar.loadEvents(around: displayedMonth, calendar: calendar)
+                setMonth(picked)
             }
         }
     }
@@ -277,19 +273,37 @@ struct CalendarView: View {
                     .frame(height: rowHeight)
                 }
             }
+            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
+            // 월이 바뀌면 그리드를 통째로 교체해 좌우 슬라이드 전환을 만든다
+            .id(displayedMonth)
+            .transition(monthSlide)
         }
+        .clipped()
         .id(colorRefreshID)
         .padding(.horizontal, 6)
-        .gesture(
-            DragGesture(minimumDistance: 24)
-                .onEnded { value in
-                    if value.translation.width < -40 {
-                        moveMonth(by: 1)
-                    } else if value.translation.width > 40 {
-                        moveMonth(by: -1)
-                    }
-                }
+        .contentShape(Rectangle())
+        .gesture(monthSwipe)
+    }
+
+    /// 월 전환 — 진행 방향에서 들어오고 반대쪽으로 나간다
+    private var monthSlide: AnyTransition {
+        .asymmetric(
+            insertion: .move(edge: slideForward ? .trailing : .leading).combined(with: .opacity),
+            removal: .move(edge: slideForward ? .leading : .trailing).combined(with: .opacity)
         )
+    }
+
+    /// 좌우 스와이프로만 월 이동. 세로로 쓸 때 달이 넘어가지 않도록
+    /// 가로 성분이 세로보다 확실히 우세할 때만 반응한다.
+    private var monthSwipe: some Gesture {
+        DragGesture(minimumDistance: 20)
+            .onEnded { value in
+                let dx = value.translation.width
+                let dy = value.translation.height
+                guard abs(dx) > abs(dy) * 1.5, abs(dx) > 50 else { return }
+
+                moveMonth(by: dx < 0 ? 1 : -1)
+            }
     }
 
     private func dayCell(for day: Date, isCurrentMonth: Bool) -> some View {
@@ -303,11 +317,12 @@ struct CalendarView: View {
         )
 
         return Button {
-            // 인접 달 날짜를 누르면 그 달로 이동
-            if !isCurrentMonth {
-                displayedMonth = calendar.startOfMonth(for: day)
+            // 인접 달 날짜를 누르면 슬라이드로 그 달에 이동
+            if isCurrentMonth {
+                selectedDate = day
+            } else {
+                setMonth(day, alsoSelect: day)
             }
-            selectedDate = day
         } label: {
             VStack(spacing: 2) {
                 Text("\(calendar.component(.day, from: day))")
@@ -613,17 +628,27 @@ struct CalendarView: View {
     private func moveMonth(by value: Int) {
         guard let next = calendar.date(byAdding: .month, value: value, to: displayedMonth) else { return }
 
-        withAnimation(.snappy(duration: 0.2)) {
-            displayedMonth = calendar.startOfMonth(for: next)
-        }
-        appleCalendar.loadEvents(around: displayedMonth, calendar: calendar)
+        setMonth(next)
     }
 
     private func goToToday() {
-        withAnimation(.snappy(duration: 0.2)) {
-            displayedMonth = calendar.startOfMonth(for: .now)
-            selectedDate = calendar.startOfDay(for: .now)
+        setMonth(.now, alsoSelect: .now)
+    }
+
+    /// 표시 월 변경의 단일 경로. 이동 방향을 먼저 정해 슬라이드 전환이
+    /// 항상 실제 이동 방향과 일치하게 한다.
+    private func setMonth(_ target: Date, alsoSelect selection: Date? = nil) {
+        let normalized = calendar.startOfMonth(for: target)
+        guard normalized != displayedMonth || selection != nil else { return }
+
+        slideForward = normalized >= displayedMonth
+        withAnimation(.snappy(duration: 0.28)) {
+            displayedMonth = normalized
+            if let selection {
+                selectedDate = calendar.startOfDay(for: selection)
+            }
         }
+        appleCalendar.loadEvents(around: normalized, calendar: calendar)
     }
 
     private func deleteSchedule(_ schedule: Schedule) {
