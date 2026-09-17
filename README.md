@@ -1,6 +1,6 @@
 <div align="center">
 
-# 📅 Kalender
+# 📅 하상원의 달력
 
 **음력과 한국 공휴일을 지원하는 iOS 무료 캘린더 · 위젯 앱**
 
@@ -21,11 +21,11 @@
 <table>
   <tr>
     <td align="center"><b>달력 · 일정</b></td>
-    <td align="center"><b>매년 기념일</b></td>
+    <td align="center"><b>다크 모드</b></td>
   </tr>
   <tr>
     <td><img src="appstore-screenshots/iphone-1-calendar.png" width="260"></td>
-    <td><img src="appstore-screenshots/iphone-2-anniversary.png" width="260"></td>
+    <td><img src="appstore-screenshots/iphone-2-dark.png" width="260"></td>
   </tr>
 </table>
 
