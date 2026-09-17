@@ -40,12 +40,24 @@ struct InfoView: View {
             Text("앱 정보")
                 .font(.system(.headline, design: .rounded).weight(.bold))
 
-            infoRow("앱 이름", value: "Kalender")
-            infoRow("버전", value: "1.0.0")
+            infoRow("앱 이름", value: "하상원의 달력")
+            infoRow("만든 사람", value: "장인 하상원")
+            infoRow("버전", value: Self.appVersion)
         }
         .padding(18)
         .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: 20))
         .shadow(color: .black.opacity(0.04), radius: 10, y: 3)
+    }
+
+    /// 번들에서 읽은 표시용 버전 (예: "1.1.0 (6)")
+    private static var appVersion: String {
+        let info = Bundle.main.infoDictionary
+        let short = info?["CFBundleShortVersionString"] as? String ?? "-"
+        guard let build = info?["CFBundleVersion"] as? String, build != short else {
+            return short
+        }
+
+        return "\(short) (\(build))"
     }
 
     private func infoRow(_ title: String, value: String) -> some View {

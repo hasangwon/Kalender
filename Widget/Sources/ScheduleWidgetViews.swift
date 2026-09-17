@@ -46,7 +46,7 @@ struct ScheduleWidget: Widget {
                     }
             }
         }
-        .configurationDisplayName("Kalender")
+        .configurationDisplayName("달력")
         .description("달력과 일정을 홈 화면에서 바로 확인하세요.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
         .contentMarginsDisabled()
@@ -262,7 +262,7 @@ private struct CalendarGridView: View {
 
                     HStack {
                         Spacer()
-                        Text("Kalender")
+                        Text("달력")
                             .font(.system(.caption2, design: .rounded).weight(.bold))
                             .foregroundStyle(.tertiary)
                             .padding(.trailing, 8)

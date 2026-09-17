@@ -54,12 +54,15 @@ struct SettingsView: View {
         }
     }
 
+    /// 스와치 줄바꿈 그리드 — 색상 수가 늘어도 좁은 화면에서 넘치지 않게
+    private static let swatchColumns = [GridItem(.adaptive(minimum: 28), spacing: 10)]
+
     private var themeCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("테마색")
                 .font(.system(.headline, design: .rounded).weight(.bold))
 
-            HStack(spacing: 10) {
+            LazyVGrid(columns: Self.swatchColumns, spacing: 10) {
                 ForEach(ThemeColor.allCases) { theme in
                     Button {
                         themeColor = theme
@@ -91,7 +94,7 @@ struct SettingsView: View {
             Text("배경색")
                 .font(.system(.headline, design: .rounded).weight(.bold))
 
-            HStack(spacing: 10) {
+            LazyVGrid(columns: Self.swatchColumns, spacing: 10) {
                 ForEach(BackgroundColor.allCases) { background in
                     Button {
                         backgroundColor = background
@@ -102,12 +105,20 @@ struct SettingsView: View {
                         Circle()
                             .fill(background.swatch)
                             .frame(width: 28, height: 28)
-                            .overlay(Circle().stroke(Color.primary.opacity(0.12), lineWidth: 1))
+                            // 블랙골드는 잉크와 색이 거의 같아 골드 테두리로 구분
+                            .overlay(
+                                Circle().stroke(
+                                    background == .blackGold
+                                        ? ThemeColor.gold.color
+                                        : Color.primary.opacity(0.12),
+                                    lineWidth: background == .blackGold ? 2.5 : 1
+                                )
+                            )
                             .overlay {
                                 if backgroundColor == background {
                                     Image(systemName: "checkmark")
                                         .font(.caption2.bold())
-                                        .foregroundStyle(background == .ink ? .white : .black.opacity(0.6))
+                                        .foregroundStyle(background.forcesDark ? .white : .black.opacity(0.6))
                                 }
                             }
                     }
@@ -116,7 +127,7 @@ struct SettingsView: View {
                 }
             }
 
-            Text("잉크를 선택하면 앱이 어두운 화면으로 표시됩니다.")
+            Text("잉크·블랙골드를 선택하면 앱이 어두운 화면으로 표시됩니다.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }

@@ -3,6 +3,8 @@ import UIKit
 
 /// 선택 가능한 테마색 (설정 > 테마색)
 enum ThemeColor: String, CaseIterable, Identifiable {
+    /// 브랜드 대표색 — 앱 아이콘(블랙·골드)과 맞춘 기본 테마
+    case gold
     case blue
     case indigo
     case teal
@@ -16,6 +18,7 @@ enum ThemeColor: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
+        case .gold: "골드"
         case .blue: "블루"
         case .indigo: "인디고"
         case .teal: "청록"
@@ -29,6 +32,10 @@ enum ThemeColor: String, CaseIterable, Identifiable {
 
     var color: Color {
         switch self {
+        case .gold:
+            // 흰 글자를 얹는 채움색으로도 쓰이므로 대비 확보된 톤으로 고정
+            // (연한 골드 느낌은 opacity(0.12) 틴트에서 나온다)
+            AppTheme.dynamicColor(light: (0.686, 0.518, 0.184), dark: (0.784, 0.620, 0.322))
         case .blue:
             AppTheme.dynamicColor(light: (0.192, 0.510, 0.965), dark: (0.357, 0.612, 0.973))
         case .indigo:
@@ -56,7 +63,7 @@ enum ThemeSettings {
     static var current: ThemeColor {
         guard let raw = EventColorSettings.store.string(forKey: key),
               let theme = ThemeColor(rawValue: raw)
-        else { return .blue }
+        else { return .gold }
 
         return theme
     }
@@ -75,6 +82,8 @@ enum BackgroundColor: String, CaseIterable, Identifiable {
     case green
     case lavender
     case ink
+    /// 블랙 배경 — 골드 테마와 짝이 되는 어두운 옵션
+    case blackGold
 
     var id: String { rawValue }
 
@@ -87,11 +96,12 @@ enum BackgroundColor: String, CaseIterable, Identifiable {
         case .green: "그린"
         case .lavender: "라벤더"
         case .ink: "잉크"
+        case .blackGold: "블랙골드"
         }
     }
 
-    /// 잉크 선택 시 앱 전체를 다크 팔레트로 렌더링
-    var forcesDark: Bool { self == .ink }
+    /// 잉크·블랙골드 선택 시 앱 전체를 다크 팔레트로 렌더링
+    var forcesDark: Bool { self == .ink || self == .blackGold }
 
     private var lightRGB: (Double, Double, Double) {
         switch self {
@@ -102,11 +112,12 @@ enum BackgroundColor: String, CaseIterable, Identifiable {
         case .green: (0.969, 0.984, 0.971)
         case .lavender: (0.980, 0.973, 0.996)
         case .ink: (0.118, 0.122, 0.133)
+        case .blackGold: (0.071, 0.063, 0.051)
         }
     }
 
     var color: Color {
-        if self == .ink {
+        if forcesDark {
             return AppTheme.dynamicColor(light: lightRGB, dark: lightRGB)
         }
 

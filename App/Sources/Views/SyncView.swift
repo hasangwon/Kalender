@@ -105,12 +105,12 @@ struct SyncView: View {
                 WidgetCenter.shared.reloadAllTimelines()
             }
 
-            Text("애플 기본 달력 앱의 일정을 Kalender에서 함께 볼 수 있어요. (달력 앱에 일정을 넣는 것은 불가능합니다)")
+            Text("애플 기본 달력 앱의 일정을 이 앱에서 함께 볼 수 있어요. (달력 앱에 일정을 넣는 것은 불가능합니다)")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
             if appleCalendarEnabled && !appleCalendar.isAuthorized {
-                Text("달력 접근 권한이 필요합니다. 아이폰 설정 → Kalender → 캘린더에서 허용해 주세요.")
+                Text("달력 접근 권한이 필요합니다. 아이폰 설정 → 달력 → 캘린더에서 허용해 주세요.")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.red)
             }
