@@ -3,6 +3,7 @@ import SwiftUI
 /// 정보 화면 — 앱 정보.
 struct InfoView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         NavigationStack {
@@ -43,10 +44,37 @@ struct InfoView: View {
             infoRow("앱 이름", value: "하상원의 달력")
             infoRow("만든 사람", value: "장인 하상원")
             infoRow("버전", value: Self.appVersion)
+
+            Divider()
+
+            reviewButton
         }
         .padding(18)
         .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: 20))
         .shadow(color: .black.opacity(0.04), radius: 10, y: 3)
+    }
+
+    /// App Store 리뷰 작성 화면으로 바로 이동
+    private var reviewButton: some View {
+        Button {
+            guard let url = ReviewRequester.writeReviewURL else { return }
+
+            openURL(url)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "star.fill")
+                    .font(.footnote)
+                Text("리뷰 남기기")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.tertiary)
+            }
+            .foregroundStyle(AppTheme.primary)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     /// 번들에서 읽은 표시용 버전 (예: "1.1.0 (6)")

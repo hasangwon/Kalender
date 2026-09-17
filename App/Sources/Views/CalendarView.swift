@@ -1,9 +1,11 @@
+import StoreKit
 import SwiftData
 import SwiftUI
 import WidgetKit
 
 struct CalendarView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.requestReview) private var requestReview
     @Query(sort: \Schedule.createdAt) private var schedules: [Schedule]
     @Query(sort: \AnniversaryEntry.createdAt) private var anniversaries: [AnniversaryEntry]
     @EnvironmentObject private var appleCalendar: AppleCalendarManager
@@ -62,7 +64,7 @@ struct CalendarView: View {
             .dynamicTypeSize(textSize.dynamicTypeSize)
             .toast(message: $toastMessage)
             .toolbar(.hidden, for: .navigationBar)
-            .sheet(isPresented: $isAddingSchedule) {
+            .sheet(isPresented: $isAddingSchedule, onDismiss: requestReviewIfEarned) {
                 ScheduleFormView(defaultDate: selectedDate)
             }
             .sheet(item: $editingSchedule) { schedule in
@@ -649,6 +651,20 @@ struct CalendarView: View {
             }
         }
         appleCalendar.loadEvents(around: normalized, calendar: calendar)
+    }
+
+    /// 일정을 막 추가한 직후(긍정적인 순간)에만, 조건을 만족하면 리뷰를 요청한다.
+    /// 실제 노출 여부는 시스템이 정하므로 시도 자체를 버전당 한 번으로 제한한다.
+    private func requestReviewIfEarned() {
+        guard ReviewRequester.shouldRequest(scheduleCount: schedules.count, calendar: calendar)
+        else { return }
+
+        ReviewRequester.markRequested()
+        Task { @MainActor in
+            // 시트가 완전히 닫힌 뒤에 띄워야 시스템 팝업이 가려지지 않는다
+            try? await Task.sleep(for: .seconds(1))
+            requestReview()
+        }
     }
 
     private func deleteSchedule(_ schedule: Schedule) {
