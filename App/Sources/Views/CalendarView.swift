@@ -544,7 +544,7 @@ struct CalendarView: View {
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 4) {
-                    if let badge = schedule.recurrence.badgeText {
+                    if let badge = schedule.recurrenceBadgeText {
                         Text(badge)
                             .font(.caption2.weight(.bold))
                             .padding(.horizontal, 8)

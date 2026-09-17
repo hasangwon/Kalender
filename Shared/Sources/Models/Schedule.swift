@@ -44,6 +44,8 @@ final class Schedule {
     var hasCustomColor: Bool = false
     /// 하루 일괄 알림 대상 여부
     var notifies: Bool = false
+    /// 매달 반복일 때만 유효. true면 기준일의 일(day)이 아니라 매달 말일(그 달의 마지막 날)에 반복한다.
+    var monthlyOnLastDay: Bool = false
     var createdAt: Date = Date.now
 
     var recurrence: Recurrence {
@@ -65,7 +67,8 @@ final class Schedule {
         color: ColorTag = .blue,
         endDate: Date? = nil,
         hasCustomColor: Bool = false,
-        notifies: Bool = false
+        notifies: Bool = false,
+        monthlyOnLastDay: Bool = false
     ) {
         self.id = UUID()
         self.title = title
@@ -77,12 +80,19 @@ final class Schedule {
         self.endDate = endDate
         self.hasCustomColor = hasCustomColor
         self.notifies = notifies
+        self.monthlyOnLastDay = monthlyOnLastDay
         self.createdAt = .now
     }
 
     /// 실제 표시 색 — 개별 지정이 없으면 유형 기본 색
     var displayColor: ColorTag {
         hasCustomColor ? color : EventColorSettings.color(for: recurrence)
+    }
+
+    /// 반복 배지 텍스트 — 매달 말일 반복이면 "매달 말일"
+    var recurrenceBadgeText: String? {
+        if recurrence == .monthly && monthlyOnLastDay { return "매달 말일" }
+        return recurrence.badgeText
     }
 
     /// 해당 날짜에 이 일정이 발생하는지
@@ -104,6 +114,13 @@ final class Schedule {
             return calendar.component(.weekday, from: dayStart)
                 == calendar.component(.weekday, from: baseStart)
         case .monthly:
+            if monthlyOnLastDay {
+                // 매달 말일: 그 달의 마지막 날에만 발생 (28/29/30/31 자동 대응)
+                guard let range = calendar.range(of: .day, in: .month, for: dayStart) else {
+                    return false
+                }
+                return calendar.component(.day, from: dayStart) == range.count
+            }
             // 기준일이 29~31일이면 해당 일자가 없는 달에는 발생하지 않음
             return calendar.component(.day, from: dayStart)
                 == calendar.component(.day, from: baseStart)

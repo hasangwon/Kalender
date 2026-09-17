@@ -15,6 +15,7 @@ struct ScheduleFormView: View {
     @State private var hasTime: Bool
     @State private var time: Date
     @State private var recurrence: Recurrence
+    @State private var monthlyOnLastDay: Bool
     @State private var notifies: Bool
     @State private var hasEndDate: Bool
     @State private var endDate: Date
@@ -33,6 +34,7 @@ struct ScheduleFormView: View {
         _hasTime = State(initialValue: false)
         _time = State(initialValue: Self.defaultTime)
         _recurrence = State(initialValue: .none)
+        _monthlyOnLastDay = State(initialValue: false)
         _notifies = State(initialValue: false)
         _hasEndDate = State(initialValue: false)
         _endDate = State(initialValue: defaultDate)
@@ -47,6 +49,7 @@ struct ScheduleFormView: View {
         _hasTime = State(initialValue: schedule.hasTime)
         _time = State(initialValue: schedule.hasTime ? schedule.startDate : Self.defaultTime)
         _recurrence = State(initialValue: schedule.recurrence)
+        _monthlyOnLastDay = State(initialValue: schedule.monthlyOnLastDay)
         _notifies = State(initialValue: schedule.notifies)
         _hasEndDate = State(initialValue: schedule.endDate != nil)
         _endDate = State(initialValue: schedule.endDate ?? schedule.startDate)
@@ -97,6 +100,11 @@ struct ScheduleFormView: View {
                     }
                     .pickerStyle(.segmented)
 
+                    // 매달 반복은 "말일 기준"으로 반복할 수 있음 (30/31일 없는 달 대응)
+                    if recurrence == .monthly {
+                        Toggle("매달 말일에 반복", isOn: $monthlyOnLastDay.animation())
+                    }
+
                     // 매주/매달 반복에서만 종료일 지정 가능
                     if recurrence != .none {
                         Toggle("종료 날짜 지정", isOn: $hasEndDate.animation())
@@ -121,6 +129,7 @@ struct ScheduleFormView: View {
                 }
                 .onChange(of: recurrence) { _, newValue in
                     if newValue == .none { hasEndDate = false }
+                    if newValue != .monthly { monthlyOnLastDay = false }
                 }
 
                 Section {
@@ -221,6 +230,9 @@ struct ScheduleFormView: View {
             let weekday = date.formatted(.dateTime.weekday(.wide).locale(Locale(identifier: "ko_KR")))
             return "선택한 날짜부터 \(weekday)마다 반복됩니다."
         case .monthly:
+            if monthlyOnLastDay {
+                return "선택한 날짜가 속한 달부터 매달 말일(그 달의 마지막 날)에 반복됩니다."
+            }
             let day = calendar.component(.day, from: date)
             return "선택한 날짜부터 매달 \(day)일마다 반복됩니다."
         }
@@ -249,6 +261,8 @@ struct ScheduleFormView: View {
             ? calendar.startOfDay(for: max(endDate, date))
             : nil
         let usesCustomColor = pickedColor != nil
+        // 말일 반복은 매달 반복일 때만 의미가 있음
+        let resolvedMonthlyOnLastDay = recurrence == .monthly && monthlyOnLastDay
 
         if let schedule = editingSchedule {
             schedule.title = trimmedTitle
@@ -260,6 +274,7 @@ struct ScheduleFormView: View {
             schedule.hasCustomColor = usesCustomColor
             schedule.color = pickedColor ?? typeDefaultColor
             schedule.notifies = notifies
+            schedule.monthlyOnLastDay = resolvedMonthlyOnLastDay
         } else {
             let schedule = Schedule(
                 title: trimmedTitle,
@@ -270,7 +285,8 @@ struct ScheduleFormView: View {
                 color: pickedColor ?? typeDefaultColor,
                 endDate: resolvedEndDate,
                 hasCustomColor: usesCustomColor,
-                notifies: notifies
+                notifies: notifies,
+                monthlyOnLastDay: resolvedMonthlyOnLastDay
             )
             modelContext.insert(schedule)
         }

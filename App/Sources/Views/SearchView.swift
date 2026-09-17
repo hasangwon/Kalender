@@ -156,7 +156,7 @@ struct SearchView: View {
                     }
 
                     HStack(spacing: 6) {
-                        if let badge = schedule.recurrence.badgeText {
+                        if let badge = schedule.recurrenceBadgeText {
                             Text(badge)
                                 .font(.caption2.weight(.bold))
                                 .foregroundStyle(schedule.displayColor.color)
