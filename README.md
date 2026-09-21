@@ -68,12 +68,29 @@ open PlanWidget.xcodeproj
 
 ---
 
+## 📦 배포
+
+| 구분 | 이름 |
+| --- | --- |
+| App Store 이름 | 하상원의 달력: 광고없는 위젯 캘린더 음력 생일 공휴일 |
+| 기기 표시 이름 (`CFBundleDisplayName`) | 하상원 달력 |
+
+> ⚠️ 두 이름이 충분히 비슷하지 않으면 App Store 심사에서 거절된다 (Guideline 2.3.8 - Accurate Metadata).
+> 기기 표시 이름은 `project.yml`의 앱·위젯 양쪽 `CFBundleDisplayName`에 있고,
+> 수정 후 `xcodegen generate`를 돌려야 `Info.plist`에 반영된다.
+
+재제출 시 `CURRENT_PROJECT_VERSION`을 올린 뒤, App Store Connect의 버전 페이지에서
+새 빌드를 명시적으로 선택해야 한다.
+
+---
+
 ## 📂 구조
 
 ```
-App/Sources/       앱 화면 · 매니저
-Widget/Sources/    홈 위젯 (Bundle · Provider · Views)
-Shared/Sources/    앱 · 위젯 공용 (모델 · 저장소 · 공휴일 · 음력)
-docs/              개인정보 처리방침
-project.yml        프로젝트 정의 (XcodeGen 원본)
+App/Sources/           앱 화면 · 매니저
+Widget/Sources/        홈 위젯 (Bundle · Provider · Views)
+Shared/Sources/        앱 · 위젯 공용 (모델 · 저장소 · 공휴일 · 음력)
+docs/                  개인정보 처리방침
+appstore-screenshots/  App Store 제출용 스크린샷
+project.yml            프로젝트 정의 (XcodeGen 원본)
 ```
