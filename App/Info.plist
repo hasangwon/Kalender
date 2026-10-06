@@ -40,7 +40,7 @@
 				<string>public.json</string>
 			</array>
 			<key>UTTypeDescription</key>
-			<string>하상원 달력 백업</string>
+			<string>내보내기 타입 1</string>
 			<key>UTTypeIdentifier</key>
 			<string>com.hasangwon.planwidget.backup</string>
 			<key>UTTypeTagSpecification</key>
@@ -60,9 +60,9 @@
 				<string>public.data</string>
 			</array>
 			<key>UTTypeDescription</key>
-			<string>빨간달력 내보내기</string>
+			<string>내보내기 타입 2</string>
 			<key>UTTypeIdentifier</key>
-			<string>com.hasangwon.planwidget.redcalendar</string>
+			<string>com.hasangwon.planwidget.type2</string>
 			<key>UTTypeTagSpecification</key>
 			<dict>
 				<key>public.filename-extension</key>

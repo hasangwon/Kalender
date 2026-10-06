@@ -4,13 +4,13 @@ import UniformTypeIdentifiers
 import WidgetKit
 
 extension UTType {
-    /// 우리 달력 백업 (.hscal, JSON)
-    static let hscalBackup = UTType(exportedAs: "com.hasangwon.planwidget.backup", conformingTo: .json)
-    /// 빨간달력 내보내기 파일 (.redcalendar, Realm DB)
-    static let redCalendar = UTType(importedAs: "com.hasangwon.planwidget.redcalendar", conformingTo: .data)
+    /// 내보내기 타입 1 (.hscal, JSON)
+    static let exportType1 = UTType(exportedAs: "com.hasangwon.planwidget.backup", conformingTo: .json)
+    /// 내보내기 타입 2 (.redcalendar, Realm DB)
+    static let exportType2 = UTType(importedAs: "com.hasangwon.planwidget.type2", conformingTo: .data)
 }
 
-/// 백업 내보내기/가져오기. 가져올 때 확장자로 우리 백업과 빨간달력을 구분한다.
+/// 백업 내보내기/가져오기. 가져올 때 확장자로 타입 1과 타입 2를 구분한다.
 enum BackupService {
     struct ImportResult {
         let added: Int
@@ -65,9 +65,9 @@ enum BackupService {
         let result: ImportResult
         switch url.pathExtension.lowercased() {
         case "redcalendar":
-            result = try importRedCalendar(data, context: context)
+            result = try importType2(data, context: context)
         case "hscal":
-            result = try importBackup(data, context: context)
+            result = try importType1(data, context: context)
         default:
             throw BackupError.unsupportedFile
         }
@@ -80,9 +80,9 @@ enum BackupService {
         return result
     }
 
-    /// 빨간달력 — 한 줄 = 종일 단일 일정. 같은 날 같은 제목이 이미 있으면 건너뛴다.
-    private static func importRedCalendar(_ data: Data, context: ModelContext) throws -> ImportResult {
-        guard let entries = try? RedCalendarImporter.entries(from: data) else { throw BackupError.unreadableFile }
+    /// 타입 2 — 한 줄 = 종일 단일 일정. 같은 날 같은 제목이 이미 있으면 건너뛴다.
+    private static func importType2(_ data: Data, context: ModelContext) throws -> ImportResult {
+        guard let entries = try? ExportType2Importer.entries(from: data) else { throw BackupError.unreadableFile }
 
         let calendar = Calendar.current
         let existing = try context.fetch(FetchDescriptor<Schedule>())
@@ -116,8 +116,8 @@ enum BackupService {
         "\(day.timeIntervalSinceReferenceDate)|\(title)"
     }
 
-    /// 우리 백업 — id가 이미 있는 항목은 건너뛴다 (같은 백업을 두 번 가져와도 중복 없음)
-    private static func importBackup(_ data: Data, context: ModelContext) throws -> ImportResult {
+    /// 타입 1 — id가 이미 있는 항목은 건너뛴다 (같은 백업을 두 번 가져와도 중복 없음)
+    private static func importType1(_ data: Data, context: ModelContext) throws -> ImportResult {
         guard let file = try? JSONDecoder().decode(BackupFile.self, from: data),
               file.version <= BackupFile.currentVersion
         else { throw BackupError.unreadableFile }
@@ -149,7 +149,7 @@ enum BackupService {
 
 // MARK: - 백업 파일 형식
 
-/// 우리 달력 백업 (.hscal). 모델을 그대로 담는다.
+/// 내보내기 타입 1 (.hscal). 모델을 그대로 담는다.
 struct BackupFile: Codable {
     static let currentVersion = 1
 
@@ -234,7 +234,7 @@ struct BackupFile: Codable {
 
 /// fileExporter용 문서 래퍼
 struct BackupDocument: FileDocument {
-    static var readableContentTypes: [UTType] { [.hscalBackup] }
+    static var readableContentTypes: [UTType] { [.exportType1] }
 
     let data: Data
 

@@ -61,7 +61,7 @@ struct SettingsView: View {
             .toast(message: $toastMessage)
             .fileImporter(
                 isPresented: $isImporting,
-                allowedContentTypes: [.hscalBackup, .redCalendar]
+                allowedContentTypes: [.exportType1, .exportType2]
             ) { result in
                 handleImport(result)
             }
@@ -71,7 +71,7 @@ struct SettingsView: View {
                     set: { if !$0 { exportDocument = nil } }
                 ),
                 document: exportDocument,
-                contentType: .hscalBackup,
+                contentType: .exportType1,
                 defaultFilename: BackupService.defaultExportName
             ) { result in
                 if case .success = result {
@@ -372,7 +372,7 @@ struct SettingsView: View {
                 }
             }
 
-            Text("우리 달력 백업(.hscal)이나 빨간달력 내보내기 파일(.redcalendar)을 가져올 수 있어요. 이미 있는 일정은 건너뛰어요.")
+            Text("내보내기 타입 1(.hscal), 타입 2(.redcalendar) 파일을 가져올 수 있어요. 이미 있는 일정은 건너뛰어요.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }

@@ -1,12 +1,12 @@
 import Foundation
 
-/// 빨간달력 내보내기 파일(.redcalendar) 읽기.
+/// 내보내기 타입 2 파일(.redcalendar) 읽기.
 ///
 /// 파일은 Realm DB(파일 형식 24) 그대로라서, 라이브러리 없이 필요한 부분만 직접 해석한다.
 /// `RC_Event` 테이블의 날짜(year/month/day)와 그날의 글자 칸(body/bodyS/bodySS/continuousBody)만
 /// 읽어 한 줄 = 종일 일정 하나로 만든다. 색상·굵게·반복·음력·메모는 사용하지 않아 무시한다.
 /// 기간 일정(continuousBody)은 원본에 하루마다 행이 따로 있어 그날의 한 줄로 취급하면 된다.
-enum RedCalendarImporter {
+enum ExportType2Importer {
     struct Entry: Hashable {
         let year: Int
         let month: Int
@@ -123,7 +123,7 @@ private struct RealmFileReader {
 
     func topRef() throws -> Int64 {
         guard bytes.count >= 24, Array(bytes[16..<20]) == Array("T-DB".utf8)
-        else { throw RedCalendarImporter.ImportError.invalidFile }
+        else { throw ExportType2Importer.ImportError.invalidFile }
 
         let slot = Int(bytes[23] & 1)
         let ref = try readUInt64(at: slot * 8)
@@ -131,18 +131,18 @@ private struct RealmFileReader {
 
         // 스트리밍 형식(내보내기 복사본 등): 위치가 파일 끝 16바이트 [top ref, 매직 쿠키]에 있다
         guard bytes.count >= 40, try readUInt64(at: bytes.count - 8) == Int64(bitPattern: 0x3034_1252_37E5_26C8)
-        else { throw RedCalendarImporter.ImportError.invalidFile }
+        else { throw ExportType2Importer.ImportError.invalidFile }
 
         return try readUInt64(at: bytes.count - 16)
     }
 
     func integers(at ref: Int64) throws -> [Int64] {
         let header = try header(at: ref)
-        guard header.widthType == 0 else { throw RedCalendarImporter.ImportError.invalidFile }
+        guard header.widthType == 0 else { throw ExportType2Importer.ImportError.invalidFile }
 
         let width = header.width
         let byteCount = (header.size * width + 7) / 8
-        guard header.start + byteCount <= bytes.count else { throw RedCalendarImporter.ImportError.invalidFile }
+        guard header.start + byteCount <= bytes.count else { throw ExportType2Importer.ImportError.invalidFile }
 
         return (0..<header.size).map { index in
             switch width {
@@ -174,7 +174,7 @@ private struct RealmFileReader {
             // 고정 폭 칸, 마지막 바이트 = 남은 패딩 수 (폭과 같으면 null)
             let width = header.width
             guard header.start + header.size * width <= bytes.count
-            else { throw RedCalendarImporter.ImportError.invalidFile }
+            else { throw ExportType2Importer.ImportError.invalidFile }
 
             return (0..<header.size).map { index in
                 guard width > 0 else { return "" }
@@ -189,7 +189,7 @@ private struct RealmFileReader {
 
         if header.hasRefs && !header.context {
             let children = try integers(at: ref)
-            guard children.count >= 2 else { throw RedCalendarImporter.ImportError.invalidFile }
+            guard children.count >= 2 else { throw ExportType2Importer.ImportError.invalidFile }
 
             // 오프셋은 각 문자열의 끝(종료 0 바이트 포함) 위치
             let offsets = try integers(at: children[0])
@@ -198,7 +198,7 @@ private struct RealmFileReader {
             return try offsets.map { end in
                 let end = Int(end)
                 guard end >= previous + 1, end <= blob.count
-                else { throw RedCalendarImporter.ImportError.invalidFile }
+                else { throw ExportType2Importer.ImportError.invalidFile }
 
                 defer { previous = end }
                 return String(decoding: blob[previous..<(end - 1)], as: UTF8.self)
@@ -215,7 +215,7 @@ private struct RealmFileReader {
             }
         }
 
-        throw RedCalendarImporter.ImportError.invalidFile
+        throw ExportType2Importer.ImportError.invalidFile
     }
 
     /// 클러스터 트리의 모든 리프. 행이 많으면 내부 노드 아래에 여러 리프로 나뉜다.
@@ -236,7 +236,7 @@ private struct RealmFileReader {
     private func blobBytes(at ref: Int64) throws -> [UInt8] {
         let header = try header(at: ref)
         guard header.start + header.size <= bytes.count
-        else { throw RedCalendarImporter.ImportError.invalidFile }
+        else { throw ExportType2Importer.ImportError.invalidFile }
 
         return Array(bytes[header.start..<(header.start + header.size)])
     }
@@ -245,7 +245,7 @@ private struct RealmFileReader {
         let start = Int(ref)
         guard ref > 0, ref % 8 == 0, start + 8 <= bytes.count,
               bytes[start..<(start + 4)].elementsEqual("AAAA".utf8)
-        else { throw RedCalendarImporter.ImportError.invalidFile }
+        else { throw ExportType2Importer.ImportError.invalidFile }
 
         let flags = bytes[start + 4]
         let size = Int(bytes[start + 5]) << 16 | Int(bytes[start + 6]) << 8 | Int(bytes[start + 7])
@@ -262,7 +262,7 @@ private struct RealmFileReader {
     }
 
     private func readUInt64(at offset: Int) throws -> Int64 {
-        guard offset + 8 <= bytes.count else { throw RedCalendarImporter.ImportError.invalidFile }
+        guard offset + 8 <= bytes.count else { throw ExportType2Importer.ImportError.invalidFile }
 
         var value: UInt64 = 0
         for i in 0..<8 {
