@@ -24,8 +24,19 @@ struct CalendarView: View {
     @State private var textSize = TextSizeSettings.current
     /// 설정 시트에서 색을 바꾸면 달력을 다시 그리기 위한 트리거
     @State private var colorRefreshID = UUID()
-    /// 월 전환 슬라이드 방향 (true = 다음 달, 오른쪽에서 들어옴)
+    /// 월 전환 슬라이드 방향 (true = 다음 달, 오른쪽/아래에서 들어옴)
     @State private var slideForward = true
+    @State private var swipeDirection = MonthSwipeSettings.current
+    /// 드래그 중 손가락을 따라 밀린 거리 (잠긴 축 기준)
+    @State private var dragOffset: CGFloat = 0
+    /// 드래그 시작 시 잠근 축 — 넘기기 애니메이션이 끝날 때까지 유지
+    @State private var dragAxis: Axis?
+    /// 설정에서 허용하지 않은 방향으로 시작한 드래그 (끝날 때까지 무시)
+    @State private var isDragRejected = false
+    /// 놓은 뒤 넘기기/복귀 애니메이션 중 — 새 드래그를 받지 않는다
+    @State private var isPaging = false
+    /// 손가락이 닿아 있는 동안 true. 시스템이 제스처를 취소하면 onEnded 없이 false로 돌아온다.
+    @GestureState private var isDragGestureActive = false
 
     private let calendar = Calendar.current
 
@@ -76,6 +87,7 @@ struct CalendarView: View {
             .sheet(isPresented: $isShowingSettings, onDismiss: {
                 colorRefreshID = UUID()
                 textSize = TextSizeSettings.current
+                swipeDirection = MonthSwipeSettings.current
             }) {
                 SettingsView()
             }
@@ -203,8 +215,10 @@ struct CalendarView: View {
             Spacer()
 
             HStack(spacing: 8) {
-                monthNavButton(systemName: "chevron.left") { moveMonth(by: -1) }
-                monthNavButton(systemName: "chevron.right") { moveMonth(by: 1) }
+                // 위아래 모드에선 화살표도 위/아래로 맞춘다
+                let isVertical = swipeDirection == .vertical
+                monthNavButton(systemName: isVertical ? "chevron.up" : "chevron.left") { moveMonth(by: -1) }
+                monthNavButton(systemName: isVertical ? "chevron.down" : "chevron.right") { moveMonth(by: 1) }
             }
         }
         .padding(.horizontal, 12)
@@ -254,58 +268,175 @@ struct CalendarView: View {
     // MARK: - 달력 그리드
 
     private var monthGrid: some View {
-        let weeks = makeWeekRows()
+        // 드래그 중엔 이전/현재/다음 달을 잠긴 축 방향으로 나란히 깔고, 끈 만큼 함께 민다.
+        // 넘기기가 끝나면 다음 달 페이지가 그대로 현재 자리에 오므로 끊김이 없다.
+        GeometryReader { geometry in
+            let size = geometry.size
 
-        // GeometryReader로 남은 높이를 측정 → 주 수로 나눠 각 주에 정확한 높이 부여.
-        // 어떤 글자 크기/기기에서도 화면을 넘지 않으면서 주 높이가 완벽히 균일해진다.
-        return GeometryReader { geometry in
-            let rowHeight = geometry.size.height / CGFloat(max(weeks.count, 1))
-
-            VStack(spacing: 0) {
-                ForEach(weeks.indices, id: \.self) { weekIndex in
-                    HStack(spacing: 2) {
-                        ForEach(0..<7, id: \.self) { dayIndex in
-                            let day = weeks[weekIndex][dayIndex]
-                            dayCell(
-                                for: day,
-                                isCurrentMonth: calendar.isDate(day, equalTo: displayedMonth, toGranularity: .month)
-                            )
-                        }
-                    }
-                    .frame(height: rowHeight)
+            ZStack(alignment: .top) {
+                ForEach(pagedMonths, id: \.self) { month in
+                    monthPage(for: month, size: size)
+                        .offset(pageOffset(for: month, size: size))
+                        // 버튼/월 선택/검색으로 이동할 때는 페이지가 통째로 교체된다
+                        .transition(monthSlide)
                 }
             }
-            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
-            // 월이 바뀌면 그리드를 통째로 교체해 좌우 슬라이드 전환을 만든다
-            .id(displayedMonth)
-            .transition(monthSlide)
+            .frame(width: size.width, height: size.height, alignment: .top)
+            .contentShape(Rectangle())
+            // 날짜 칸이 버튼이라 일반 .gesture면 버튼이 터치를 붙잡고 있다가 손을 뗄 때
+            // 한꺼번에 넘겨줘 손가락을 따라가지 못한다. 드래그를 우선시하고 탭은 버튼에 맡긴다.
+            .highPriorityGesture(monthSwipe(pageSize: size))
+            // 전화·알림 센터 등으로 제스처가 취소되면 onEnded가 불리지 않는다 → 밀린 상태 복구
+            .onChange(of: isDragGestureActive) { _, isActive in
+                guard !isActive else { return }
+
+                isDragRejected = false
+                if dragAxis != nil, !isPaging {
+                    finishPaging(step: 0, pageLength: 0)
+                }
+            }
         }
         .clipped()
         .id(colorRefreshID)
         .padding(.horizontal, 6)
-        .contentShape(Rectangle())
-        .gesture(monthSwipe)
+    }
+
+    /// 드래그 중에만 이전 · 다음 달을 함께 그린다 (평소엔 현재 달 한 장)
+    private var pagedMonths: [Date] {
+        guard dragAxis != nil else { return [displayedMonth] }
+
+        return [-1, 0, 1].compactMap { calendar.date(byAdding: .month, value: $0, to: displayedMonth) }
+    }
+
+    /// 드래그 중이 아니면 설정 방향의 축으로 미끄러진다 (좌우+위아래는 좌우)
+    private var pagingAxis: Axis {
+        dragAxis ?? (swipeDirection == .vertical ? .vertical : .horizontal)
+    }
+
+    /// 드래그 중 이웃 달과의 간격 — 붙어 있으면 두 달의 날짜가 이어져 읽히지 않는다
+    private let pageGap: CGFloat = 40
+
+    private func pageOffset(for month: Date, size: CGSize) -> CGSize {
+        let index = CGFloat(calendar.dateComponents([.month], from: displayedMonth, to: month).month ?? 0)
+
+        switch pagingAxis {
+        case .horizontal: return CGSize(width: index * (size.width + pageGap) + dragOffset, height: 0)
+        case .vertical: return CGSize(width: 0, height: index * (size.height + pageGap) + dragOffset)
+        }
+    }
+
+    private func monthPage(for month: Date, size: CGSize) -> some View {
+        let weeks = makeWeekRows(for: month)
+        // 남은 높이를 주 수로 나눠 각 주에 정확한 높이 부여.
+        // 어떤 글자 크기/기기에서도 화면을 넘지 않으면서 주 높이가 완벽히 균일해진다.
+        let rowHeight = size.height / CGFloat(max(weeks.count, 1))
+
+        return VStack(spacing: 0) {
+            ForEach(weeks.indices, id: \.self) { weekIndex in
+                HStack(spacing: 2) {
+                    ForEach(0..<7, id: \.self) { dayIndex in
+                        let day = weeks[weekIndex][dayIndex]
+                        dayCell(
+                            for: day,
+                            isCurrentMonth: calendar.isDate(day, equalTo: month, toGranularity: .month)
+                        )
+                    }
+                }
+                .frame(height: rowHeight)
+            }
+        }
+        .frame(width: size.width, height: size.height, alignment: .top)
     }
 
     /// 월 전환 — 진행 방향에서 들어오고 반대쪽으로 나간다
     private var monthSlide: AnyTransition {
-        .asymmetric(
-            insertion: .move(edge: slideForward ? .trailing : .leading).combined(with: .opacity),
-            removal: .move(edge: slideForward ? .leading : .trailing).combined(with: .opacity)
+        let forwardIn: Edge = pagingAxis == .horizontal ? .trailing : .bottom
+        let forwardOut: Edge = pagingAxis == .horizontal ? .leading : .top
+
+        return .asymmetric(
+            insertion: .move(edge: slideForward ? forwardIn : forwardOut).combined(with: .opacity),
+            removal: .move(edge: slideForward ? forwardOut : forwardIn).combined(with: .opacity)
         )
     }
 
-    /// 좌우 스와이프로만 월 이동. 세로로 쓸 때 달이 넘어가지 않도록
-    /// 가로 성분이 세로보다 확실히 우세할 때만 반응한다.
-    private var monthSwipe: some Gesture {
-        DragGesture(minimumDistance: 20)
-            .onEnded { value in
-                let dx = value.translation.width
-                let dy = value.translation.height
-                guard abs(dx) > abs(dy) * 1.5, abs(dx) > 50 else { return }
+    // MARK: - 월 넘기기 드래그
 
-                moveMonth(by: dx < 0 ? 1 : -1)
+    /// 설정한 방향으로 끌면 달력이 손가락을 따라 움직이고, 놓을 때 넘길지 정한다.
+    /// 왼쪽/위로 밀면 다음 달, 오른쪽/아래로 밀면 이전 달.
+    private func monthSwipe(pageSize: CGSize) -> some Gesture {
+        DragGesture(minimumDistance: 10)
+            .updating($isDragGestureActive) { _, isActive, _ in isActive = true }
+            .onChanged { value in
+                guard !isPaging else { return }
+                if dragAxis == nil, !isDragRejected {
+                    lockDragAxis(for: value.translation)
+                }
+                guard let axis = dragAxis else { return }
+
+                let pageLength = (axis == .horizontal ? pageSize.width : pageSize.height) + pageGap
+                let translation = axis == .horizontal ? value.translation.width : value.translation.height
+                // 한 페이지 이상은 밀리지 않게
+                dragOffset = min(max(translation, -pageLength), pageLength)
             }
+            .onEnded { value in
+                isDragRejected = false
+                guard !isPaging, let axis = dragAxis else { return }
+
+                let pageLength = (axis == .horizontal ? pageSize.width : pageSize.height) + pageGap
+                let predicted = axis == .horizontal
+                    ? value.predictedEndTranslation.width
+                    : value.predictedEndTranslation.height
+
+                // 페이지의 1/4 이상 끌었거나, 빠르게 튕겨 반 페이지 이상 갈 기세면 넘긴다
+                let step: Int
+                if dragOffset < 0, -dragOffset > pageLength * 0.25 || -predicted > pageLength * 0.5 {
+                    step = 1
+                } else if dragOffset > 0, dragOffset > pageLength * 0.25 || predicted > pageLength * 0.5 {
+                    step = -1
+                } else {
+                    step = 0
+                }
+
+                finishPaging(step: step, pageLength: pageLength)
+            }
+    }
+
+    /// 처음 움직인 방향으로 축을 잠근다. 설정에서 막힌 방향이면 이번 드래그는 무시.
+    private func lockDragAxis(for translation: CGSize) {
+        let isHorizontal = abs(translation.width) > abs(translation.height)
+
+        if isHorizontal, swipeDirection.allowsHorizontal {
+            dragAxis = .horizontal
+        } else if !isHorizontal, swipeDirection.allowsVertical {
+            dragAxis = .vertical
+        } else {
+            isDragRejected = true
+        }
+    }
+
+    /// 놓은 뒤 남은 거리를 마저 밀고(step 0이면 제자리로), 끝나면 표시 월을 확정한다.
+    private func finishPaging(step: Int, pageLength: CGFloat) {
+        isPaging = true
+
+        withAnimation(.easeOut(duration: 0.22)) {
+            dragOffset = -CGFloat(step) * pageLength
+        } completion: {
+            // 다음 달 페이지가 이미 제자리에 와 있으므로 애니메이션 없이 기준만 바꾼다
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                if step != 0, let next = calendar.date(byAdding: .month, value: step, to: displayedMonth) {
+                    displayedMonth = next
+                }
+                dragOffset = 0
+                dragAxis = nil
+            }
+            isPaging = false
+
+            if step != 0 {
+                appleCalendar.loadEvents(around: displayedMonth, calendar: calendar)
+            }
+        }
     }
 
     private func dayCell(for day: Date, isCurrentMonth: Bool) -> some View {
@@ -591,21 +722,21 @@ struct CalendarView: View {
 
     // MARK: - 동작
 
-    private func makeWeekRows() -> [[Date]] {
-        guard let range = calendar.range(of: .day, in: .month, for: displayedMonth) else { return [] }
+    private func makeWeekRows(for month: Date) -> [[Date]] {
+        guard let range = calendar.range(of: .day, in: .month, for: month) else { return [] }
 
-        let firstWeekday = calendar.component(.weekday, from: displayedMonth)
+        let firstWeekday = calendar.component(.weekday, from: month)
         let leading = firstWeekday - 1
 
         // 이번 달 날짜
         let days: [Date] = range.compactMap {
-            calendar.date(byAdding: .day, value: $0 - 1, to: displayedMonth)
+            calendar.date(byAdding: .day, value: $0 - 1, to: month)
         }
 
         // 앞쪽: 전달 말일들 (같은 줄에 흐릿하게)
         var leadingDays: [Date] = []
         for offset in stride(from: leading, to: 0, by: -1) {
-            if let date = calendar.date(byAdding: .day, value: -offset, to: displayedMonth) {
+            if let date = calendar.date(byAdding: .day, value: -offset, to: month) {
                 leadingDays.append(date)
             }
         }
@@ -639,7 +770,11 @@ struct CalendarView: View {
 
     /// 표시 월 변경의 단일 경로. 이동 방향을 먼저 정해 슬라이드 전환이
     /// 항상 실제 이동 방향과 일치하게 한다.
+    /// 버튼/검색/오늘 등으로 넘길 때는 설정한 넘기기 방향의 축으로 미끄러진다.
     private func setMonth(_ target: Date, alsoSelect selection: Date? = nil) {
+        // 드래그로 넘기는 중엔 무시 — 완료 시 기준 월이 한 번 더 바뀌는 것을 막는다
+        guard dragAxis == nil, !isPaging else { return }
+
         let normalized = calendar.startOfMonth(for: target)
         guard normalized != displayedMonth || selection != nil else { return }
 
