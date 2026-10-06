@@ -42,7 +42,7 @@ struct InfoView: View {
                 .font(.system(.headline, design: .rounded).weight(.bold))
 
             infoRow("앱 이름", value: "하상원의 달력")
-            infoRow("만든 사람", value: "장인 하상원")
+            infoRow("만든 사람", value: "하상원")
             infoRow("버전", value: Self.appVersion)
 
             Divider()

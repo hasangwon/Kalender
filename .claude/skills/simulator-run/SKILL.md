@@ -39,7 +39,7 @@ description: 시뮬레이터에 앱 빌드·설치·실행하고 스크린샷으
    xcrun simctl launch "$DEVICE" com.hasangwon.planwidget
 
 4. 화면 확인
-   open -a Simulator                             # 사용자에게 창 표시
+   open /Applications/Xcode.app/Contents/Applications/DeviceHub.app  # 사용자에게 창 표시 (Simulator.app 대신 Device Hub)
    xcrun simctl io "$DEVICE" screenshot shot.png # 스크린샷 캡처 → Read로 확인
 ```
 

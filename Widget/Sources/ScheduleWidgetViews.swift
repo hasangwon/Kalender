@@ -254,20 +254,10 @@ private struct CalendarGridView: View {
     var body: some View {
         VStack(spacing: 4) {
             if showsHeader {
-                ZStack {
-                    Text(entry.monthTitle)
-                        .font(.system(.subheadline, design: .rounded).weight(.heavy))
-                        .foregroundStyle(AppTheme.primary)
-                        .frame(maxWidth: .infinity)
-
-                    HStack {
-                        Spacer()
-                        Text("달력")
-                            .font(.system(.caption2, design: .rounded).weight(.bold))
-                            .foregroundStyle(.tertiary)
-                            .padding(.trailing, 8)
-                    }
-                }
+                Text(entry.monthTitle)
+                    .font(.system(.subheadline, design: .rounded).weight(.heavy))
+                    .foregroundStyle(AppTheme.primary)
+                    .frame(maxWidth: .infinity)
             }
 
             HStack(spacing: 2) {
@@ -307,7 +297,7 @@ private struct CalendarGridView: View {
 
         return VStack(spacing: 1) {
             Text("\(cell.day)")
-                .scaledFont(size: 10, weight: cell.isToday ? .heavy : .medium, design: .rounded)
+                .scaledFont(size: 10, weight: cell.isToday ? .heavy : .semibold, design: .rounded)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
                 .foregroundStyle(
