@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 import WidgetKit
 
 /// 설정 — 반복 유형별 일정 색 (8색 팔레트, 중복 허용)
@@ -16,6 +17,10 @@ struct SettingsView: View {
     @State private var editingRecurrence: Recurrence?
     @State private var textSize = TextSizeSettings.current
     @State private var widgetTextSize = WidgetTextSizeSettings.current
+    @State private var swipeDirection = MonthSwipeSettings.current
+    @State private var isImporting = false
+    @State private var exportDocument: BackupDocument?
+    @State private var toastMessage: String?
     @State private var digestTime: Date = {
         Calendar.current.date(
             bySettingHour: NotificationSettings.digestHour,
@@ -31,8 +36,10 @@ struct SettingsView: View {
                 VStack(spacing: 24) {
                     themeCard
                     textSizeCard
+                    swipeCard
                     colorCard
                     notificationCard
+                    backupCard
                 }
                 .dynamicTypeSize(textSize.dynamicTypeSize)
                 .padding(16)
@@ -51,6 +58,26 @@ struct SettingsView: View {
                 }
             }
             .toolbarBackground(AppTheme.background, for: .navigationBar)
+            .toast(message: $toastMessage)
+            .fileImporter(
+                isPresented: $isImporting,
+                allowedContentTypes: [.hscalBackup, .redCalendar]
+            ) { result in
+                handleImport(result)
+            }
+            .fileExporter(
+                isPresented: Binding(
+                    get: { exportDocument != nil },
+                    set: { if !$0 { exportDocument = nil } }
+                ),
+                document: exportDocument,
+                contentType: .hscalBackup,
+                defaultFilename: BackupService.defaultExportName
+            ) { result in
+                if case .success = result {
+                    toastMessage = "백업 파일을 저장했어요"
+                }
+            }
         }
     }
 
@@ -290,6 +317,92 @@ struct SettingsView: View {
                 }
                 .buttonStyle(.plain)
             }
+        }
+    }
+
+    private var swipeCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("달력 넘기기")
+                .font(.system(.headline, design: .rounded).weight(.bold))
+
+            HStack(spacing: 8) {
+                ForEach(MonthSwipeDirection.allCases) { option in
+                    Button {
+                        swipeDirection = option
+                        MonthSwipeSettings.setCurrent(option)
+                    } label: {
+                        Text(option.label)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(swipeDirection == option ? .white : .primary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 9)
+                            .background(
+                                RoundedRectangle(cornerRadius: 11)
+                                    .fill(swipeDirection == option ? AppTheme.primary : Color.primary.opacity(0.06))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            Text("왼쪽·위로 밀면 다음 달, 오른쪽·아래로 밀면 이전 달로 넘어가요.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .padding(18)
+        .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: 20))
+        .shadow(color: .black.opacity(0.04), radius: 10, y: 3)
+    }
+
+    private var backupCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("백업")
+                .font(.system(.headline, design: .rounded).weight(.bold))
+
+            HStack(spacing: 8) {
+                backupButton("내보내기", systemImage: "square.and.arrow.up") {
+                    do {
+                        exportDocument = BackupDocument(data: try BackupService.exportData(context: modelContext))
+                    } catch {
+                        toastMessage = "백업 파일을 만들지 못했어요"
+                    }
+                }
+                backupButton("가져오기", systemImage: "square.and.arrow.down") {
+                    isImporting = true
+                }
+            }
+
+            Text("우리 달력 백업(.hscal)이나 빨간달력 내보내기 파일(.redcalendar)을 가져올 수 있어요. 이미 있는 일정은 건너뛰어요.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .padding(18)
+        .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: 20))
+        .shadow(color: .black.opacity(0.04), radius: 10, y: 3)
+    }
+
+    private func backupButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 9)
+                .background(RoundedRectangle(cornerRadius: 11).fill(Color.primary.opacity(0.06)))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func handleImport(_ result: Result<URL, Error>) {
+        guard case .success(let url) = result else { return }
+
+        do {
+            let imported = try BackupService.importFile(at: url, context: modelContext)
+            toastMessage = imported.skipped > 0
+                ? "\(imported.added)개 가져왔어요 (\(imported.skipped)개 건너뜀)"
+                : "\(imported.added)개 가져왔어요"
+        } catch {
+            toastMessage = (error as? LocalizedError)?.errorDescription ?? "가져오지 못했어요"
         }
     }
 
