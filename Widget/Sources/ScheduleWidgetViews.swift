@@ -69,7 +69,7 @@ struct ScheduleWidgetEntryView: View {
         switch family {
         case .systemLarge:
             // 기본 여백을 없애고 얇은 자체 패딩만 사용 — 달력을 최대한 크게
-            LargeCalendarView(entry: entry)
+            CalendarGridView(entry: entry)
                 .padding(.horizontal, 10)
                 .padding(.top, 10)
                 .padding(.bottom, 6)
@@ -104,7 +104,6 @@ private struct DateHeader: View {
 
 private struct EventRow: View {
     let event: DayEvent
-    var showsTime = true
 
     private var barColor: Color {
         event.kind == .holiday ? AppTheme.primary : (event.colorTag?.color ?? .secondary)
@@ -120,7 +119,7 @@ private struct EventRow: View {
                 Text(event.title)
                     .font(.system(.caption, design: .rounded).weight(.semibold))
                     .lineLimit(1)
-                if showsTime, let timeText = event.timeText {
+                if let timeText = event.timeText {
                     Text(timeText)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
@@ -247,18 +246,16 @@ private func makeWeekRows(leadingBlanks: Int, cells: [MonthCell]) -> [[MonthCell
 
 private struct CalendarGridView: View {
     let entry: ScheduleEntry
-    var showsHeader = true
+    @Environment(\.widgetTextScale) private var scale
 
     private let weekdaySymbols = ["일", "월", "화", "수", "목", "금", "토"]
 
     var body: some View {
         VStack(spacing: 4) {
-            if showsHeader {
-                Text(entry.monthTitle)
-                    .font(.system(.subheadline, design: .rounded).weight(.heavy))
-                    .foregroundStyle(AppTheme.primary)
-                    .frame(maxWidth: .infinity)
-            }
+            Text(entry.monthTitle)
+                .font(.system(.subheadline, design: .rounded).weight(.heavy))
+                .foregroundStyle(AppTheme.primary)
+                .frame(maxWidth: .infinity)
 
             HStack(spacing: 2) {
                 ForEach(weekdaySymbols.indices, id: \.self) { index in
@@ -292,7 +289,6 @@ private struct CalendarGridView: View {
     }
 
     private func dayCell(_ cell: MonthCell) -> some View {
-        let scale = WidgetTextSizeSettings.current.widgetScale
         let daySide = 16 * scale
 
         return VStack(spacing: 1) {
@@ -338,13 +334,5 @@ private struct CalendarGridView: View {
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
-private struct LargeCalendarView: View {
-    let entry: ScheduleEntry
-
-    var body: some View {
-        CalendarGridView(entry: entry)
     }
 }

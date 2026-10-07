@@ -18,7 +18,8 @@ struct ToastModifier: ViewModifier {
                     // message가 바뀔 때마다 타이머 리셋 → 쌓이지 않고 마지막 것만 유지
                     .id(message)
                     .task(id: message) {
-                        try? await Task.sleep(for: .seconds(2))
+                        // 새 메시지로 취소된 경우엔 지우지 않는다 (지우면 방금 뜬 새 메시지가 사라짐)
+                        do { try await Task.sleep(for: .seconds(2)) } catch { return }
                         withAnimation(.snappy) { self.message = nil }
                     }
             }

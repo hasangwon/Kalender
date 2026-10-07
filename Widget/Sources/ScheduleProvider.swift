@@ -63,7 +63,7 @@ struct ScheduleProvider: TimelineProvider {
             after: .now,
             matching: DateComponents(hour: 0, minute: 0, second: 5),
             matchingPolicy: .nextTime
-        ) ?? calendar.date(byAdding: .hour, value: 1, to: .now)!
+        ) ?? calendar.date(byAdding: .hour, value: 1, to: .now) ?? .now.addingTimeInterval(3600)
 
         completion(Timeline(entries: [entry], policy: .after(nextMidnight)))
     }
@@ -76,41 +76,44 @@ struct ScheduleProvider: TimelineProvider {
         let schedules = (try? context.fetch(FetchDescriptor<Schedule>())) ?? []
         let anniversaries = (try? context.fetch(FetchDescriptor<AnniversaryEntry>())) ?? []
 
-        let today = DayEventResolver.events(
-            schedules: schedules, anniversaries: anniversaries, on: now, calendar: calendar
+        // 내일부터 7일
+        let upcomingDays = (1...7).compactMap { calendar.date(byAdding: .day, value: $0, to: now) }
+
+        // Large 달력 그리드 (이번 달)
+        let monthStart = calendar.startOfMonth(for: now)
+        let dayRange = calendar.range(of: .day, in: .month, for: monthStart) ?? 1..<31
+        let leadingBlanks = calendar.component(.weekday, from: monthStart) - 1
+        let monthDays: [(number: Int, date: Date)] = dayRange.compactMap { number in
+            calendar.date(byAdding: .day, value: number - 1, to: monthStart).map { (number, $0) }
+        }
+
+        // 필요한 날짜를 모아 한 번에 계산 — 날짜마다 전체 일정을 훑지 않는다
+        let eventsByDay = DayEventResolver.eventsByDay(
+            schedules: schedules, anniversaries: anniversaries,
+            days: [now] + upcomingDays + monthDays.map(\.date), calendar: calendar
         )
+        func events(on day: Date) -> [DayEvent] {
+            eventsByDay[calendar.startOfDay(for: day)] ?? []
+        }
 
-        // 내일부터 7일간, 일정이 있는 날만
-        let upcoming: [WidgetDayGroup] = (1...7).compactMap { offset in
-            guard let day = calendar.date(byAdding: .day, value: offset, to: now) else { return nil }
+        let today = events(on: now)
 
-            let items = DayEventResolver.events(
-                schedules: schedules, anniversaries: anniversaries, on: day, calendar: calendar
-            )
+        // 일정이 있는 날만
+        let upcoming: [WidgetDayGroup] = upcomingDays.compactMap { day in
+            let items = events(on: day)
             guard !items.isEmpty else { return nil }
 
             return WidgetDayGroup(date: day, items: items)
         }
 
-        // Large 달력 그리드 (이번 달)
-        let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: now)) ?? now
-        let dayRange = calendar.range(of: .day, in: .month, for: monthStart) ?? 1..<31
-        let leadingBlanks = calendar.component(.weekday, from: monthStart) - 1
-
-        let monthCells: [MonthCell] = dayRange.compactMap { dayNumber in
-            guard let day = calendar.date(byAdding: .day, value: dayNumber - 1, to: monthStart) else {
-                return nil
-            }
-
-            let events = DayEventResolver.events(
-                schedules: schedules, anniversaries: anniversaries, on: day, calendar: calendar
-            )
+        let monthCells: [MonthCell] = monthDays.map { dayNumber, day in
+            let events = events(on: day)
             let firstVisible = events.first { $0.kind != .holiday } ?? events.first
 
             return MonthCell(
                 day: dayNumber,
                 isToday: calendar.isDateInToday(day),
-                isHoliday: KoreanHolidays.isHoliday(day, calendar: calendar)
+                isHoliday: events.contains { $0.kind == .holiday }
                     || calendar.component(.weekday, from: day) == 1
                     || calendar.component(.weekday, from: day) == 7,
                 title: firstVisible?.title,

@@ -61,7 +61,7 @@ enum ThemeSettings {
     private static let key = "theme.primaryColor"
 
     static var current: ThemeColor {
-        guard let raw = EventColorSettings.store.string(forKey: key),
+        guard let raw = SharedDefaults.store.string(forKey: key),
               let theme = ThemeColor(rawValue: raw)
         else { return .gold }
 
@@ -69,7 +69,7 @@ enum ThemeSettings {
     }
 
     static func setCurrent(_ theme: ThemeColor) {
-        EventColorSettings.store.set(theme.rawValue, forKey: key)
+        SharedDefaults.store.set(theme.rawValue, forKey: key)
     }
 }
 
@@ -135,7 +135,7 @@ enum BackgroundSettings {
     private static let key = "theme.backgroundColor"
 
     static var current: BackgroundColor {
-        guard let raw = EventColorSettings.store.string(forKey: key),
+        guard let raw = SharedDefaults.store.string(forKey: key),
               let background = BackgroundColor(rawValue: raw)
         else { return .gray }
 
@@ -143,7 +143,7 @@ enum BackgroundSettings {
     }
 
     static func setCurrent(_ background: BackgroundColor) {
-        EventColorSettings.store.set(background.rawValue, forKey: key)
+        SharedDefaults.store.set(background.rawValue, forKey: key)
     }
 }
 

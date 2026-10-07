@@ -26,9 +26,7 @@ enum ReviewRequester {
     private static let firstLaunchKey = "review.firstLaunchDate"
     private static let requestedVersionKey = "review.requestedVersion"
 
-    private static var store: UserDefaults {
-        UserDefaults(suiteName: SharedConstants.appGroupID) ?? .standard
-    }
+    private static var store: UserDefaults { SharedDefaults.store }
 
     private static var currentVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "-"

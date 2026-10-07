@@ -269,6 +269,13 @@ struct CalendarView: View {
         // 드래그 중엔 MonthSwipePager가 위치만 옮기므로 날짜 칸을 새로 만들거나 다시 계산하지 않는다.
         GeometryReader { geometry in
             let size = geometry.size
+            // 3장의 날짜를 모아 한 번에 계산 (겹치는 앞뒤 달 날짜는 한 번만)
+            let eventsByDay = DayEventResolver.eventsByDay(
+                schedules: schedules, anniversaries: anniversaries,
+                appleEvents: appleCalendar.events,
+                days: pagedMonths.flatMap { makeWeekRows(for: $0).flatMap { $0 } },
+                calendar: calendar
+            )
 
             MonthSwipePager(
                 size: size,
@@ -286,7 +293,7 @@ struct CalendarView: View {
             ) {
                 ZStack(alignment: .top) {
                     ForEach(pagedMonths, id: \.self) { month in
-                        monthPage(for: month, size: size)
+                        monthPage(for: month, size: size, eventsByDay: eventsByDay)
                             .modifier(MonthPageSlot(
                                 index: calendar.dateComponents([.month], from: displayedMonth, to: month).month ?? 0,
                                 size: size,
@@ -316,13 +323,8 @@ struct CalendarView: View {
     /// 이웃 달과의 간격 — 붙어 있으면 두 달의 날짜가 이어져 읽히지 않는다
     private let pageGap: CGFloat = 40
 
-    private func monthPage(for month: Date, size: CGSize) -> some View {
+    private func monthPage(for month: Date, size: CGSize, eventsByDay: [Date: [DayEvent]]) -> some View {
         let weeks = makeWeekRows(for: month)
-        // 칸마다 전체 일정을 훑지 않도록 이 달 그리드 전체를 한 번에 계산
-        let eventsByDay = DayEventResolver.eventsByDay(
-            schedules: schedules, anniversaries: anniversaries,
-            appleEvents: appleCalendar.events, days: weeks.flatMap { $0 }, calendar: calendar
-        )
         // 남은 높이를 주 수로 나눠 각 주에 정확한 높이 부여.
         // 어떤 글자 크기/기기에서도 화면을 넘지 않으면서 주 높이가 완벽히 균일해진다.
         let rowHeight = size.height / CGFloat(max(weeks.count, 1))
@@ -360,7 +362,8 @@ struct CalendarView: View {
         let isSelected = calendar.isDate(day, inSameDayAs: selectedDate)
         let isToday = calendar.isDateInToday(day)
         let weekday = calendar.component(.weekday, from: day)
-        let isHoliday = KoreanHolidays.isHoliday(day, calendar: calendar)
+        // 공휴일 판정은 이미 이벤트 목록에 들어 있다 (DayEventResolver가 공휴일일 때만 .holiday 추가)
+        let isHoliday = dayEvents.contains { $0.kind == .holiday }
 
         return Button {
             // 인접 달 날짜를 누르면 슬라이드로 그 달에 이동
@@ -430,11 +433,12 @@ struct CalendarView: View {
     // MARK: - 선택한 날짜 일정
 
     private var daySection: some View {
+        let daySchedules = ScheduleStore.occurrences(in: schedules, on: selectedDate, calendar: calendar)
+        // 이미 발생 판정된 일정만 넘겨 전체 일정 순회를 한 번으로 줄인다
         let dayEvents = DayEventResolver.events(
-            schedules: schedules, anniversaries: anniversaries,
+            schedules: daySchedules, anniversaries: anniversaries,
             appleEvents: appleCalendar.events, on: selectedDate, calendar: calendar
         )
-        let daySchedules = ScheduleStore.occurrences(in: schedules, on: selectedDate, calendar: calendar)
         // 공휴일/생일/애플달력 = 수정 불가 카드로 표시
         let staticEvents = dayEvents.filter { $0.kind != .schedule }
 
@@ -921,11 +925,5 @@ private extension Color {
                 alpha: alpha
             )
         })
-    }
-}
-
-extension Calendar {
-    func startOfMonth(for date: Date) -> Date {
-        self.date(from: dateComponents([.year, .month], from: date)) ?? date
     }
 }

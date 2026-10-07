@@ -36,11 +36,10 @@ struct SearchView: View {
             .sorted { $0.startDate > $1.startDate }
     }
 
-    private var visibleResults: [Schedule] {
-        Array(results.prefix(visibleCount))
-    }
-
     var body: some View {
+        // 전체 일정 필터·정렬은 렌더당 한 번만 — 하위 뷰와 행 onAppear는 이 값을 공유한다
+        let results = results
+
         NavigationStack {
             VStack(spacing: 0) {
                 searchField
@@ -50,7 +49,7 @@ struct SearchView: View {
                 } else if results.isEmpty {
                     noResults
                 } else {
-                    resultList
+                    resultList(results)
                 }
             }
             .background(AppTheme.background)
@@ -108,8 +107,10 @@ struct SearchView: View {
             .frame(maxHeight: .infinity)
     }
 
-    private var resultList: some View {
-        ScrollView {
+    private func resultList(_ results: [Schedule]) -> some View {
+        let visibleResults = Array(results.prefix(visibleCount))
+
+        return ScrollView {
             LazyVStack(spacing: 8) {
                 ForEach(visibleResults) { schedule in
                     resultCard(schedule)

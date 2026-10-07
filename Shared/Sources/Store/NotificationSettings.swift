@@ -6,17 +6,17 @@ enum NotificationSettings {
     private static let minuteKey = "notification.digestMinute"
 
     static var digestHour: Int {
-        let stored = EventColorSettings.store.object(forKey: hourKey) as? Int
+        let stored = SharedDefaults.store.object(forKey: hourKey) as? Int
         return stored ?? 8
     }
 
     static var digestMinute: Int {
-        let stored = EventColorSettings.store.object(forKey: minuteKey) as? Int
+        let stored = SharedDefaults.store.object(forKey: minuteKey) as? Int
         return stored ?? 0
     }
 
     static func setDigestTime(hour: Int, minute: Int) {
-        EventColorSettings.store.set(hour, forKey: hourKey)
-        EventColorSettings.store.set(minute, forKey: minuteKey)
+        SharedDefaults.store.set(hour, forKey: hourKey)
+        SharedDefaults.store.set(minute, forKey: minuteKey)
     }
 }

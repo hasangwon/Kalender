@@ -2,7 +2,7 @@ import Foundation
 
 /// 동기화 관련 사용자 설정 (App Group 공유)
 enum SyncSettings {
-    private static var store: UserDefaults { EventColorSettings.store }
+    private static var store: UserDefaults { SharedDefaults.store }
 
     private static let iCloudKey = "sync.iCloudEnabled"
     private static let appleCalendarKey = "sync.appleCalendarEnabled"
