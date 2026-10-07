@@ -23,33 +23,46 @@ struct SearchView: View {
         query.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// 매칭된 전체 결과 (제목/메모, 대소문자 무시), 최신 시작일 순
-    private var results: [Schedule] {
-        guard !trimmedQuery.isEmpty else { return [] }
+    /// 검색 결과 (제목/메모, 대소문자 무시), 최신 시작일 순.
+    /// 입력이 잠깐 멈췄을 때·일정이 바뀌었을 때만 계산하고, 무한 스크롤은 이 값을 재사용한다.
+    @State private var results: [Schedule] = []
+    /// `results`가 어떤 검색어로 계산된 것인지 — 입력 직후 아직 계산 전이면 다르다
+    @State private var searchedQuery = ""
 
-        let keyword = trimmedQuery.lowercased()
+    /// 연속 입력 중 중복 검색을 줄이는 대기 시간
+    private let searchDelay: Duration = .milliseconds(250)
+
+    /// 검색 결과에 영향을 주는 값 (제목·메모로 매칭, 시작일로 정렬) — 바뀌면 다시 검색
+    private var searchSnapshot: [String] {
+        schedules.map { "\($0.title)\u{1F}\($0.memo)\u{1F}\($0.startDate.timeIntervalSinceReferenceDate)" }
+    }
+
+    private func search(_ keyword: String) -> [Schedule] {
+        guard !keyword.isEmpty else { return [] }
+
+        let lowered = keyword.lowercased()
         return schedules
             .filter { schedule in
-                schedule.title.lowercased().contains(keyword)
-                    || schedule.memo.lowercased().contains(keyword)
+                schedule.title.lowercased().contains(lowered)
+                    || schedule.memo.lowercased().contains(lowered)
             }
             .sorted { $0.startDate > $1.startDate }
     }
 
     var body: some View {
-        // 전체 일정 필터·정렬은 렌더당 한 번만 — 하위 뷰와 행 onAppear는 이 값을 공유한다
-        let results = results
-
         NavigationStack {
             VStack(spacing: 0) {
                 searchField
 
                 if trimmedQuery.isEmpty {
                     emptyPrompt
-                } else if results.isEmpty {
+                } else if !results.isEmpty {
+                    resultList(results)
+                } else if searchedQuery == trimmedQuery {
                     noResults
                 } else {
-                    resultList(results)
+                    // 입력 직후 검색 대기 중
+                    Spacer()
                 }
             }
             .background(AppTheme.background)
@@ -67,6 +80,19 @@ struct SearchView: View {
             .toolbarBackground(AppTheme.background, for: .navigationBar)
         }
         .onAppear { isSearchFocused = true }
+        .task(id: trimmedQuery) {
+            let keyword = trimmedQuery
+            if !keyword.isEmpty {
+                // 입력이 이어지면 이 task가 취소되고 새 검색어로 다시 시작된다
+                do { try await Task.sleep(for: searchDelay) } catch { return }
+            }
+            results = search(keyword)
+            searchedQuery = keyword
+        }
+        // 같은 일정의 제목·메모·날짜만 바뀌면 배열 비교로는 감지되지 않아(같은 객체) 값으로 비교한다
+        .onChange(of: searchSnapshot) { _, _ in
+            results = search(searchedQuery)
+        }
     }
 
     private var searchField: some View {

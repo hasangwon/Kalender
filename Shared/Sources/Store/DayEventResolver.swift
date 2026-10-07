@@ -80,24 +80,8 @@ enum DayEventResolver {
         days: [Date],
         calendar: Calendar = .current
     ) -> [Date: [DayEvent]] {
-        let dayStarts = Set(days.map { calendar.startOfDay(for: $0) })
-        let sortedDays = dayStarts.sorted()
-
-        // 단일 일정은 시작일 하루만 후보, 반복 일정은 시작일 이후 모든 날이 후보
-        var candidates: [Date: [Schedule]] = [:]
-        for schedule in schedules {
-            let start = calendar.startOfDay(for: schedule.startDate)
-            switch schedule.recurrence {
-            case .none:
-                if dayStarts.contains(start) {
-                    candidates[start, default: []].append(schedule)
-                }
-            case .weekly, .monthly:
-                for day in sortedDays where day >= start {
-                    candidates[day, default: []].append(schedule)
-                }
-            }
-        }
+        let sortedDays = Set(days.map { calendar.startOfDay(for: $0) }).sorted()
+        let candidates = ScheduleStore.candidatesByDay(in: schedules, days: sortedDays, calendar: calendar)
 
         let appleByDay = Dictionary(grouping: appleEvents) { calendar.startOfDay(for: $0.startDate) }
 

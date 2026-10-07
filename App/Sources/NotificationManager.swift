@@ -26,57 +26,101 @@ enum NotificationManager {
         let body: String
     }
 
-    /// 예약 전체 갱신
+    /// 예약 전체 갱신 요청.
+    /// 알림 시간 피커를 돌리거나 연달아 저장하면 짧은 간격으로 여러 번 불린다 →
+    /// 잠깐 모았다가 마지막 요청 하나만, 이전 작업이 끝난 뒤 순서대로 반영한다.
     static func refresh(context: ModelContext) {
-        // 모델 읽기는 호출한 컨텍스트에서 동기로 끝내고, Task에는 값만 넘긴다
-        let digests = makeDigests(context: context)
+        let container = context.container
+        Task { @MainActor in
+            RefreshScheduler.shared.request(container: container)
+        }
+    }
 
-        Task {
-            let center = UNUserNotificationCenter.current()
-            let settings = await center.notificationSettings()
+    @MainActor
+    private final class RefreshScheduler {
+        static let shared = RefreshScheduler()
 
-            // 기존 예약 제거 후 다시 계산
-            let pending = await center.pendingNotificationRequests()
-                .map(\.identifier)
-                .filter { $0.hasPrefix(identifierPrefix) }
-            center.removePendingNotificationRequests(withIdentifiers: pending)
+        /// 연속 요청을 모으는 시간
+        private let debounce: Duration = .milliseconds(300)
+        private var current: Task<Void, Never>?
 
-            guard settings.authorizationStatus == .authorized
-                || settings.authorizationStatus == .provisional
-            else { return }
+        func request(container: ModelContainer) {
+            let previous = current
+            previous?.cancel()
 
-            for digest in digests {
-                let content = UNMutableNotificationContent()
-                content.title = digest.title
-                content.body = digest.body
-                content.sound = .default
+            current = Task { @MainActor in
+                // 앞선 반영이 끝난 뒤에 시작 — 예약 삭제/추가가 섞이지 않게
+                await previous?.value
+                do { try await Task.sleep(for: debounce) } catch { return }
 
-                let request = UNNotificationRequest(
-                    identifier: identifierPrefix + digestID(digest.components),
-                    content: content,
-                    trigger: UNCalendarNotificationTrigger(dateMatching: digest.components, repeats: false)
-                )
-
-                try? await center.add(request)
+                // 모델 읽기는 메인 액터에서 끝내고, 이후엔 값(Digest)만 다룬다
+                let digests = NotificationManager.makeDigests(context: ModelContext(container))
+                await NotificationManager.apply(digests)
             }
+        }
+    }
+
+    /// 기존 예약을 지우고 새 일괄 알림을 예약한다. 더 새 요청이 오면(취소) 중간에 멈춘다.
+    private static func apply(_ digests: [Digest]) async {
+        let center = UNUserNotificationCenter.current()
+        let settings = await center.notificationSettings()
+
+        let pending = await center.pendingNotificationRequests()
+            .map(\.identifier)
+            .filter { $0.hasPrefix(identifierPrefix) }
+        center.removePendingNotificationRequests(withIdentifiers: pending)
+
+        guard settings.authorizationStatus == .authorized
+            || settings.authorizationStatus == .provisional
+        else { return }
+
+        for digest in digests {
+            // 더 새 요청이 들어왔으면 그쪽이 지우고 다시 예약하므로 여기서 멈춘다
+            if Task.isCancelled { return }
+
+            let content = UNMutableNotificationContent()
+            content.title = digest.title
+            content.body = digest.body
+            content.sound = .default
+
+            let request = UNNotificationRequest(
+                identifier: identifierPrefix + digestID(digest.components),
+                content: content,
+                trigger: UNCalendarNotificationTrigger(dateMatching: digest.components, repeats: false)
+            )
+
+            try? await center.add(request)
         }
     }
 
     /// 향후 30일 중 알림 일정이 있는 날의 일괄 알림 내용
     private static func makeDigests(context: ModelContext) -> [Digest] {
-        let schedules = ((try? context.fetch(FetchDescriptor<Schedule>())) ?? [])
-            .filter(\.notifies)
-        guard !schedules.isEmpty else { return [] }
-
         let calendar = Calendar.current
         let now = Date.now
+        // 알림을 켠 일정 중 향후 30일에 나올 수 있는 것만 읽는다 (반복 일정은 판정에 맡김)
+        let rangeStart = calendar.startOfDay(for: now)
+        let rangeEnd = calendar.date(byAdding: .day, value: 31, to: rangeStart) ?? now
+        let singleRaw = Recurrence.none.rawValue
+        let descriptor = FetchDescriptor<Schedule>(predicate: #Predicate { schedule in
+            schedule.notifies && (
+                schedule.recurrenceRaw != singleRaw
+                    || (schedule.startDate >= rangeStart && schedule.startDate < rangeEnd)
+            )
+        })
+        let schedules = (try? context.fetch(descriptor)) ?? []
+        guard !schedules.isEmpty else { return [] }
+
         let hour = NotificationSettings.digestHour
         let minute = NotificationSettings.digestMinute
 
-        return (0..<30).compactMap { offset in
-            guard let day = calendar.date(byAdding: .day, value: offset, to: now) else { return nil }
+        let days = (0..<30).compactMap { calendar.date(byAdding: .day, value: $0, to: now) }
+        // 종료됐거나 아직 시작 전인 반복 일정은 빼고, 맞을 수 있는 날에만 후보로 둔다
+        let candidates = ScheduleStore.candidatesByDay(in: schedules, days: days, calendar: calendar)
 
-            let dayNotes = ScheduleStore.occurrences(in: schedules, on: day, calendar: calendar)
+        return days.compactMap { day in
+            let dayNotes = ScheduleStore.occurrences(
+                in: candidates[calendar.startOfDay(for: day)] ?? [], on: day, calendar: calendar
+            )
             guard !dayNotes.isEmpty else { return nil }
 
             var components = calendar.dateComponents([.year, .month, .day], from: day)

@@ -42,6 +42,8 @@ PlanWidget.xcodeproj  ← XcodeGen 생성물 (원본은 project.yml)
   - 이때 앱과 위젯의 데이터가 분리되므로, 위젯 데이터 공유 테스트는 서명 환경에서
 - **일정을 변경하는 모든 코드는 저장 후 `WidgetCenter.shared.reloadAllTimelines()` 호출**
   - 앱에서는 `modelContext.commitChanges(refreshesNotifications:)` 사용 (저장 + 위젯 갱신 + 일정이면 알림 재예약)
+- 알림 재예약(`NotificationManager.refresh`)은 0.3초 모아서 마지막 요청만, 이전 작업이 끝난 뒤 순서대로 반영된다
+- 애플 달력(EventKit) 조회는 메인 밖에서 하고 값만 메인으로 — 늦게 끝난 이전 요청은 버림, 외부 변경(`EKEventStoreChanged`) 시 재조회
 
 ## 3. 반복 일정 모델
 
@@ -61,6 +63,7 @@ PlanWidget.xcodeproj  ← XcodeGen 생성물 (원본은 project.yml)
   - `@Model` 객체를 엔트리에 직접 담지 말 것 (컨텍스트 수명 문제)
 - 타임라인: 엔트리 1개 + `.after(다음 자정)` 갱신. 데이터 변경 갱신은 앱의 reload 호출에 의존
 - 지원 패밀리: systemSmall, systemMedium, systemLarge(이번 달 그리드)
+- 크기별로 필요한 날짜만 계산 (Small: 오늘, Medium: 오늘+7일, Large: 이번 달). 단일 일정은 그 기간 것만 fetch
 - iOS 17 `containerBackground(for: .widget)` 필수
 
 ## 5. 디렉토리 구조

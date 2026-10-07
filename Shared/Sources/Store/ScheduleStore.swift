@@ -69,4 +69,69 @@ enum ScheduleStore {
                 }
             }
     }
+
+    /// 여러 날짜에 나올 수 있는 일정 후보를 날짜별로 (키: 그 날의 startOfDay).
+    /// 날짜마다 전체 일정을 훑으면 날짜 수 × 일정 수만큼 판정이 돌기 때문에, 맞을 수 있는 날에만 넣는다.
+    /// 최종 발생 판정은 호출하는 쪽에서 `occurrences(in:on:)` → `Schedule.occurs`로 다시 한다 ("후보 줄이기"일 뿐).
+    static func candidatesByDay(
+        in schedules: [Schedule],
+        days: [Date],
+        calendar: Calendar = .current
+    ) -> [Date: [Schedule]] {
+        let sortedDays = Set(days.map { calendar.startOfDay(for: $0) }).sorted()
+        let dayStarts = Set(sortedDays)
+
+        // 날짜별 요일·일·말일 여부를 한 번만 계산해 둔다
+        let dayInfos = sortedDays.map { day in
+            DayInfo(
+                date: day,
+                weekday: calendar.component(.weekday, from: day),
+                dayOfMonth: calendar.component(.day, from: day),
+                isLastDayOfMonth: calendar.range(of: .day, in: .month, for: day)?.count
+                    == calendar.component(.day, from: day)
+            )
+        }
+        let rangeStart = sortedDays.first ?? .distantPast
+        let rangeEnd = sortedDays.last ?? .distantFuture
+
+        var candidates: [Date: [Schedule]] = [:]
+        for schedule in schedules {
+            let start = calendar.startOfDay(for: schedule.startDate)
+            switch schedule.recurrence {
+            case .none:
+                if dayStarts.contains(start) {
+                    candidates[start, default: []].append(schedule)
+                }
+            case .weekly, .monthly:
+                // 표시 기간과 겹치지 않는 반복(이미 끝났거나 아직 시작 전)은 건너뛴다
+                let end = schedule.endDate.map { calendar.startOfDay(for: $0) }
+                if start > rangeEnd { continue }
+                if let end, end < rangeStart { continue }
+
+                let startWeekday = calendar.component(.weekday, from: start)
+                let startDay = calendar.component(.day, from: start)
+                for info in dayInfos where info.date >= start && (end.map { info.date <= $0 } ?? true) {
+                    let matches: Bool
+                    switch schedule.recurrence {
+                    case .weekly: matches = info.weekday == startWeekday
+                    case .monthly: matches = schedule.monthlyOnLastDay ? info.isLastDayOfMonth : info.dayOfMonth == startDay
+                    case .none: matches = false
+                    }
+                    if matches {
+                        candidates[info.date, default: []].append(schedule)
+                    }
+                }
+            }
+        }
+
+        return candidates
+    }
+
+    /// candidatesByDay용 날짜별 사전 계산 값
+    private struct DayInfo {
+        let date: Date
+        let weekday: Int
+        let dayOfMonth: Int
+        let isLastDayOfMonth: Bool
+    }
 }

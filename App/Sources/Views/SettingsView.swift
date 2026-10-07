@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 import WidgetKit
@@ -19,6 +20,8 @@ struct SettingsView: View {
     @State private var swipeDirection = MonthSwipeSettings.current
     @State private var isImporting = false
     @State private var exportDocument: BackupDocument?
+    /// 백업/가져오기 진행 중 문구 (nil이면 대기) — 진행 중엔 화면을 덮어 상태를 보여주고 중복 실행을 막는다
+    @State private var backupProgress: String?
     @State private var toastMessage: String?
     @State private var digestTime: Date = {
         Calendar.current.date(
@@ -58,6 +61,8 @@ struct SettingsView: View {
             }
             .toolbarBackground(AppTheme.background, for: .navigationBar)
             .toast(message: $toastMessage)
+            .overlay { backupProgressOverlay }
+            .interactiveDismissDisabled(backupProgress != nil)
             .fileImporter(
                 isPresented: $isImporting,
                 allowedContentTypes: [.exportType1, .exportType2]
@@ -321,10 +326,12 @@ struct SettingsView: View {
 
             HStack(spacing: 8) {
                 backupButton("내보내기", systemImage: "square.and.arrow.up") {
-                    do {
-                        exportDocument = BackupDocument(data: try BackupService.exportData(context: modelContext))
-                    } catch {
-                        toastMessage = "백업 파일을 만들지 못했어요"
+                    runBackupTask("백업 파일 만드는 중…") {
+                        do {
+                            exportDocument = BackupDocument(data: try BackupService.exportData(context: modelContext))
+                        } catch {
+                            toastMessage = "백업 파일을 만들지 못했어요"
+                        }
                     }
                 }
                 backupButton("가져오기", systemImage: "square.and.arrow.down") {
@@ -349,18 +356,57 @@ struct SettingsView: View {
                 .background(RoundedRectangle(cornerRadius: 11).fill(Color.primary.opacity(0.06)))
         }
         .buttonStyle(.plain)
+        .disabled(backupProgress != nil)
     }
 
     private func handleImport(_ result: Result<URL, Error>) {
         guard case .success(let url) = result else { return }
 
-        do {
-            let imported = try BackupService.importFile(at: url, context: modelContext)
-            toastMessage = imported.skipped > 0
-                ? "\(imported.added)개 가져왔어요 (\(imported.skipped)개 건너뜀)"
-                : "\(imported.added)개 가져왔어요"
-        } catch {
-            toastMessage = (error as? LocalizedError)?.errorDescription ?? "가져오지 못했어요"
+        runBackupTask("일정 가져오는 중…") {
+            do {
+                let imported = try BackupService.importFile(at: url, context: modelContext)
+                toastMessage = imported.skipped > 0
+                    ? "\(imported.added)개 가져왔어요 (\(imported.skipped)개 건너뜀)"
+                    : "\(imported.added)개 가져왔어요"
+            } catch {
+                toastMessage = (error as? LocalizedError)?.errorDescription ?? "가져오지 못했어요"
+            }
+        }
+    }
+
+    /// 진행 표시를 먼저 화면에 띄운 뒤 작업을 실행한다.
+    /// 작업 자체는 메인에서 돌지만, 표시가 그려진 다음 시작하므로 사용자는 진행 중임을 알 수 있다
+    /// (스피너는 시스템 애니메이션이라 작업 중에도 돈다).
+    private func runBackupTask(_ message: String, work: @escaping () -> Void) {
+        guard backupProgress == nil else { return }
+
+        backupProgress = message
+        Task { @MainActor in
+            // 표시가 한 프레임 이상 그려질 시간을 준다
+            try? await Task.sleep(for: .milliseconds(80))
+            work()
+            backupProgress = nil
+        }
+    }
+
+    @ViewBuilder
+    private var backupProgressOverlay: some View {
+        if let backupProgress {
+            ZStack {
+                Color.black.opacity(0.25)
+                    .ignoresSafeArea()
+
+                VStack(spacing: 12) {
+                    ProgressView()
+                        .controlSize(.large)
+                    Text(backupProgress)
+                        .font(.subheadline.weight(.semibold))
+                }
+                .padding(.horizontal, 28)
+                .padding(.vertical, 22)
+                .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: 18))
+            }
+            .transition(.opacity)
         }
     }
 
