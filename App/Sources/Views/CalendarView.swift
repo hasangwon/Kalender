@@ -130,6 +130,8 @@ struct CalendarView: View {
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
+            // 시스템 기본 라벨이 "드래그"로 읽혀 VoiceOver용 이름을 지정
+            .accessibilityLabel("메뉴")
 
             Spacer()
 
@@ -284,6 +286,9 @@ struct CalendarView: View {
                                 size: size,
                                 gap: pageGap
                             ))
+                            // 화면 밖 이웃 달은 터치·VoiceOver 대상에서 뺀다 (clipped는 히트 테스트를 막지 않음)
+                            .allowsHitTesting(month == displayedMonth)
+                            .accessibilityHidden(month != displayedMonth)
                             // 월 선택/검색으로 멀리 이동할 때는 페이지가 통째로 교체된다
                             .transition(monthSlide)
                     }
@@ -304,6 +309,9 @@ struct CalendarView: View {
     private var pagingAxis: Axis {
         swipeDirection == .vertical ? .vertical : .horizontal
     }
+
+    /// 버튼/월 선택 이동 애니메이션 길이 — 이 동안 다음 이동을 받지 않는다
+    private static let monthSlideDuration: TimeInterval = 0.28
 
     /// 이웃 달과의 간격 — 붙어 있으면 두 달의 날짜가 이어져 읽히지 않는다
     private let pageGap: CGFloat = 40
@@ -694,14 +702,15 @@ struct CalendarView: View {
         guard normalized != displayedMonth || selection != nil else { return }
 
         slideForward = normalized >= displayedMonth
-        pagerGate.isBusy = true
-        withAnimation(.snappy(duration: 0.28)) {
+        // 달이 바뀔 때만 잠근다 (같은 달 안에서 날짜만 고르는 경우는 연타 걱정이 없다)
+        if normalized != displayedMonth {
+            pagerGate.lock(for: Self.monthSlideDuration)
+        }
+        withAnimation(.snappy(duration: Self.monthSlideDuration)) {
             displayedMonth = normalized
             if let selection {
                 selectedDate = calendar.startOfDay(for: selection)
             }
-        } completion: { [pagerGate] in
-            pagerGate.isBusy = false
         }
         appleCalendar.loadEvents(around: normalized, calendar: calendar)
     }
@@ -731,10 +740,38 @@ struct CalendarView: View {
 /// 드래그 넘기기 진행 여부. 값이 바뀌어도 CalendarView를 다시 그리지 않도록 참조 타입으로 둔다.
 private final class MonthPagerGate {
     var isBusy = false
+    private var lockID = 0
+
+    /// 일정 시간 동안 잠근다. withAnimation의 completion은 애니메이션이 끝나기 전에 불릴 수 있어
+    /// (실측: 0.28초 애니메이션에 0.04초 만에 호출) 시간으로 푼다 — 항상 풀리므로 영구 잠김도 없다.
+    func lock(for duration: TimeInterval) {
+        isBusy = true
+        lockID += 1
+        let id = lockID
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
+            guard let self, self.lockID == id else { return }
+            self.isBusy = false
+        }
+    }
+
+    /// 드래그 넘기기처럼 끝나는 시점을 직접 아는 경우
+    func lock() {
+        isBusy = true
+        lockID += 1
+    }
+
+    func unlock() {
+        isBusy = false
+        lockID += 1
+    }
 }
 
 private struct MonthPagerAxisKey: EnvironmentKey {
     static let defaultValue: Axis = .horizontal
+}
+
+private struct MonthPagerIsDraggingKey: EnvironmentKey {
+    static let defaultValue = false
 }
 
 private extension EnvironmentValues {
@@ -742,6 +779,12 @@ private extension EnvironmentValues {
     var monthPagerAxis: Axis {
         get { self[MonthPagerAxisKey.self] }
         set { self[MonthPagerAxisKey.self] = newValue }
+    }
+
+    /// 드래그(넘기기 애니메이션 포함) 중인지 — 이웃 달은 이때만 보인다
+    var monthPagerIsDragging: Bool {
+        get { self[MonthPagerIsDraggingKey.self] }
+        set { self[MonthPagerIsDraggingKey.self] = newValue }
     }
 }
 
@@ -752,13 +795,19 @@ private struct MonthPageSlot: ViewModifier {
     let size: CGSize
     let gap: CGFloat
     @Environment(\.monthPagerAxis) private var axis
+    @Environment(\.monthPagerIsDragging) private var isDragging
 
     func body(content: Content) -> some View {
-        content.offset(
-            x: axis == .horizontal ? CGFloat(index) * (size.width + gap) : 0,
-            y: axis == .vertical ? CGFloat(index) * (size.height + gap) : 0
-        )
+        content
+            .offset(
+                x: axis == .horizontal ? CGFloat(index) * (size.width + gap) : 0,
+                y: axis == .vertical ? CGFloat(index) * (size.height + gap) : 0
+            )
+            // 드래그 중이 아니면 이웃 달은 그리지 않는다 (레이아웃은 유지되므로 드래그 시작 때 다시 만들지 않는다)
+            .opacity(isVisible ? 1 : 0)
     }
+
+    private var isVisible: Bool { index == 0 || isDragging }
 }
 
 /// 설정한 방향으로 끌면 달력이 손가락을 따라 움직이고, 놓을 때 넘길지 정한다.
@@ -796,6 +845,7 @@ private struct MonthSwipePager<Content: View>: View {
     var body: some View {
         content
             .environment(\.monthPagerAxis, layoutAxis)
+            .environment(\.monthPagerIsDragging, dragAxis != nil)
             .offset(
                 x: dragAxis == .horizontal ? dragOffset : 0,
                 y: dragAxis == .vertical ? dragOffset : 0
@@ -876,7 +926,7 @@ private struct MonthSwipePager<Content: View>: View {
             isDragRejected = true
             return
         }
-        gate.isBusy = true
+        gate.lock()
     }
 
     /// 놓은 뒤 남은 거리를 마저 밀고(step 0이면 제자리로), 끝나면 표시 월을 확정한다.
@@ -897,7 +947,7 @@ private struct MonthSwipePager<Content: View>: View {
                 dragAxis = nil
             }
             isPaging = false
-            gate.isBusy = false
+            gate.unlock()
 
             if step != 0 {
                 onPagingFinished()
