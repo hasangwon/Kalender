@@ -49,10 +49,10 @@ enum KoreanHolidays {
         ],
     ]
 
-    private static var computedCache: [Int: [(month: Int, day: Int, name: String)]] = [:]
+    nonisolated(unsafe) private static var computedCache: [Int: [(month: Int, day: Int, name: String)]] = [:]
     private static let cacheLock = NSLock()
 
-    static func holidays(
+    private static func holidays(
         forYear year: Int,
         calendar: Calendar = .current
     ) -> [(month: Int, day: Int, name: String)] {

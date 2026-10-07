@@ -51,13 +51,15 @@ PlanWidget.xcodeproj  ← XcodeGen 생성물 (원본은 project.yml)
   - `weekly`: 시작일 이후 && 요일 일치
   - `monthly`: 시작일 이후 && 일(day) 일치 — 29~31일 시작은 해당 일자가 없는 달에 미발생
 - 날짜별 목록/정렬은 `ScheduleStore.occurrences(in:on:)` 사용 (종일 → 시간순)
+- **여러 날짜를 한꺼번에 그릴 때(달력 그리드, 위젯 타임라인)는 `DayEventResolver.eventsByDay` 사용**
+  - 날짜마다 `DayEventResolver.events`를 부르면 날짜 수 × 일정 수만큼 판정이 돌아 화면이 멈춘다 (실측: 일정 178개, 한 달 21ms → 0.7ms)
 
 ## 4. 위젯 아키텍처
 
 - `TimelineProvider`에서 SwiftData를 **동기 fetch** 후 값 타입(`WidgetScheduleItem`)으로 변환
   - `@Model` 객체를 엔트리에 직접 담지 말 것 (컨텍스트 수명 문제)
 - 타임라인: 엔트리 1개 + `.after(다음 자정)` 갱신. 데이터 변경 갱신은 앱의 reload 호출에 의존
-- 지원 패밀리: systemSmall, systemMedium
+- 지원 패밀리: systemSmall, systemMedium, systemLarge(이번 달 그리드)
 - iOS 17 `containerBackground(for: .widget)` 필수
 
 ## 5. 디렉토리 구조

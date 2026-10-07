@@ -9,7 +9,7 @@ enum Lunar {
         return calendar
     }()
 
-    struct Components {
+    private struct Components {
         let month: Int
         let day: Int
         let isLeapMonth: Bool
@@ -17,12 +17,12 @@ enum Lunar {
 
     /// chinese 캘린더 변환은 비싸다. 달력 그리드·기념일 판정·양력 환산이 같은 날짜를 반복해서 묻기 때문에
     /// 결과를 날짜별로 기억해 둔다 (변환 결과는 날짜가 같으면 항상 같다).
-    private static var componentsCache: [Date: Components] = [:]
+    nonisolated(unsafe) private static var componentsCache: [Date: Components] = [:]
     private static let cacheLock = NSLock()
     /// 메모리 상한 — 넘으면 비우고 다시 채운다 (몇 년치 날짜 정도)
     private static let cacheLimit = 4000
 
-    static func components(from date: Date) -> Components {
+    private static func components(from date: Date) -> Components {
         cacheLock.lock()
         defer { cacheLock.unlock() }
 

@@ -6,8 +6,6 @@ struct AppleCalendarEvent: Identifiable {
     let title: String
     let startDate: Date
     let isAllDay: Bool
-    /// 캘린더 색 (기본 달력 앱의 캘린더별 색)
-    let colorHex: String?
 
     func occurs(on day: Date, calendar: Calendar = .current) -> Bool {
         calendar.isDate(startDate, inSameDayAs: day)

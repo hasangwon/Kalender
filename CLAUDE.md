@@ -13,7 +13,7 @@
 ## 핵심 스택
 
 - **SwiftUI + SwiftData** (iOS 17+)
-- **WidgetKit** — 홈 화면 위젯 (Small/Medium)
+- **WidgetKit** — 홈 화면 위젯 (Small/Medium/Large)
 - **XcodeGen** — `project.yml`이 프로젝트 원본. `.xcodeproj`는 생성물이라 git 무시
 - 로그인 없음 (추후 카카오 로그인 예정. Apple 로그인은 유료 계정 문제로 보류)
 

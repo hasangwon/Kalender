@@ -33,6 +33,10 @@
   - 모델 CRUD → `@Environment(\.modelContext)` + `@Query`
   - 시트 표시는 `@State` Bool 또는 `@State var editing: Model?` (item 시트)
 - 매 렌더마다 생성되는 `DateFormatter` 금지 — `formatted(.dateTime...)` API 우선
+  - 시간 텍스트("오후 3:30")는 `TimeTextFormatter.shared` 재사용
+- App Group 설정은 `SharedDefaults.store`로 읽기 — `UserDefaults(suiteName:)`를 매번 만들지 말 것
+- 월 그리드처럼 무거운 하위 뷰가 있는 화면에서 매 프레임 바뀌는 상태(드래그 거리 등)는 작은 하위 뷰로 분리
+- 움직이는 콘텐츠에 `.brightness`/`.blur` 등 필터나 콘텐츠 전체 `.shadow` 금지 — 매 프레임 오프스크린 렌더링
 - 색상/스타일 하드코딩보다 시스템 시맨틱 컬러 우선 (`Color(.systemBackground)` 등)
 
 ## 3. SwiftData 규칙

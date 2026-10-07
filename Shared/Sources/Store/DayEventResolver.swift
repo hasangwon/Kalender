@@ -113,17 +113,4 @@ enum DayEventResolver {
         }
         return result
     }
-
-    /// 달력 셀 도트용 색 (기념일+일정, 최대 3개 — 공휴일은 도트가 아니라 숫자색으로 표현)
-    static func dotColors(
-        schedules: [Schedule],
-        anniversaries: [AnniversaryEntry],
-        on day: Date,
-        calendar: Calendar = .current
-    ) -> [ColorTag] {
-        events(schedules: schedules, anniversaries: anniversaries, on: day, calendar: calendar)
-            .compactMap(\.colorTag)
-            .prefix(3)
-            .map { $0 }
-    }
 }

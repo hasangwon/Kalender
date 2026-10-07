@@ -28,21 +28,25 @@ final class AppleCalendarManager: ObservableObject {
         }
     }
 
-    /// 지정한 달(기준일이 속한 달) 앞뒤로 이벤트 로드
+    /// 로드한 이벤트 비우기 (동기화 해제 시)
     func clear() {
         events = []
     }
 
+    /// 지정한 달(기준일이 속한 달) 앞뒤로 이벤트 로드
     func loadEvents(around date: Date, calendar: Calendar = .current) {
         guard SyncSettings.appleCalendarEnabled, isAuthorized else {
             events = []
             return
         }
 
-        // 이전 달 1일 ~ 다음 달 말일까지 넉넉히 (인접 달 표시 대응)
-        guard let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: date)),
-              let rangeStart = calendar.date(byAdding: .day, value: -7, to: monthStart),
-              let rangeEnd = calendar.date(byAdding: .month, value: 2, to: monthStart)
+        // 달력이 앞뒤 달 페이지를 미리 깔아 두므로 이전 달 ~ 다음 달 전체,
+        // 그리고 그 그리드에 흐리게 보이는 앞뒤 1주까지
+        let monthStart = calendar.startOfMonth(for: date)
+        guard let previousMonth = calendar.date(byAdding: .month, value: -1, to: monthStart),
+              let rangeStart = calendar.date(byAdding: .day, value: -7, to: previousMonth),
+              let afterNextMonth = calendar.date(byAdding: .month, value: 2, to: monthStart),
+              let rangeEnd = calendar.date(byAdding: .day, value: 7, to: afterNextMonth)
         else { return }
 
         // 공휴일/구독 캘린더 제외 — 우리 자체 공휴일과 중복되지 않도록.
@@ -67,17 +71,8 @@ final class AppleCalendarManager: ObservableObject {
                 id: ekEvent.eventIdentifier ?? UUID().uuidString,
                 title: ekEvent.title ?? "(제목 없음)",
                 startDate: ekEvent.startDate,
-                isAllDay: ekEvent.isAllDay,
-                colorHex: ekEvent.calendar?.cgColor.flatMap(Self.hexString(from:))
+                isAllDay: ekEvent.isAllDay
             )
         }
-    }
-
-    private static func hexString(from cgColor: CGColor) -> String? {
-        guard let comps = cgColor.components, comps.count >= 3 else { return nil }
-        let r = Int((comps[0] * 255).rounded())
-        let g = Int((comps[1] * 255).rounded())
-        let b = Int((comps[2] * 255).rounded())
-        return String(format: "#%02X%02X%02X", r, g, b)
     }
 }
