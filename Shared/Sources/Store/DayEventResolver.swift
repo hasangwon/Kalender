@@ -70,6 +70,50 @@ enum DayEventResolver {
         return result
     }
 
+    /// 여러 날짜의 이벤트를 한 번에 — 달력 그리드용 (키: 그 날의 startOfDay).
+    /// 날짜마다 전체 일정을 훑으면 칸 수 × 일정 수만큼 판정이 돌아 화면이 멈춘다.
+    /// 일정을 먼저 날짜별 후보로 나눠 두고, 발생 판정·정렬은 기존 `events(...)` 경로를 그대로 쓴다.
+    static func eventsByDay(
+        schedules: [Schedule],
+        anniversaries: [AnniversaryEntry],
+        appleEvents: [AppleCalendarEvent] = [],
+        days: [Date],
+        calendar: Calendar = .current
+    ) -> [Date: [DayEvent]] {
+        let dayStarts = Set(days.map { calendar.startOfDay(for: $0) })
+        let sortedDays = dayStarts.sorted()
+
+        // 단일 일정은 시작일 하루만 후보, 반복 일정은 시작일 이후 모든 날이 후보
+        var candidates: [Date: [Schedule]] = [:]
+        for schedule in schedules {
+            let start = calendar.startOfDay(for: schedule.startDate)
+            switch schedule.recurrence {
+            case .none:
+                if dayStarts.contains(start) {
+                    candidates[start, default: []].append(schedule)
+                }
+            case .weekly, .monthly:
+                for day in sortedDays where day >= start {
+                    candidates[day, default: []].append(schedule)
+                }
+            }
+        }
+
+        let appleByDay = Dictionary(grouping: appleEvents) { calendar.startOfDay(for: $0.startDate) }
+
+        var result: [Date: [DayEvent]] = [:]
+        for day in sortedDays {
+            result[day] = events(
+                schedules: candidates[day] ?? [],
+                anniversaries: anniversaries,
+                appleEvents: appleByDay[day] ?? [],
+                on: day,
+                calendar: calendar
+            )
+        }
+        return result
+    }
+
     /// 달력 셀 도트용 색 (기념일+일정, 최대 3개 — 공휴일은 도트가 아니라 숫자색으로 표현)
     static func dotColors(
         schedules: [Schedule],

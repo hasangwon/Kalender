@@ -131,9 +131,6 @@ final class Schedule {
     var timeText: String? {
         guard hasTime else { return nil }
 
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ko_KR")
-        formatter.dateFormat = "a h:mm"
-        return formatter.string(from: startDate)
+        return TimeTextFormatter.shared.string(from: startDate)
     }
 }
