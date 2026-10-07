@@ -2,7 +2,6 @@ import SwiftUI
 
 /// 정보 화면 — 앱 정보.
 struct InfoView: View {
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -19,15 +18,7 @@ struct InfoView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.footnote.weight(.bold))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 30, height: 30)
-                            .background(Color.primary.opacity(0.05), in: Circle())
-                    }
+                    SheetCloseButton()
                 }
             }
             .toolbarBackground(AppTheme.background, for: .navigationBar)
@@ -39,7 +30,7 @@ struct InfoView: View {
     private var appInfoCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("앱 정보")
-                .font(.system(.headline, design: .rounded).weight(.bold))
+                .cardTitleFont()
 
             infoRow("앱 이름", value: "하상원의 달력")
             infoRow("만든 사람", value: "하상원")
@@ -49,9 +40,7 @@ struct InfoView: View {
 
             reviewButton
         }
-        .padding(18)
-        .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.04), radius: 10, y: 3)
+        .cardStyle()
     }
 
     /// App Store 리뷰 작성 화면으로 바로 이동

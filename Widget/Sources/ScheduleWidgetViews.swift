@@ -90,12 +90,12 @@ private struct DateHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(date.formatted(.dateTime.month(.defaultDigits).locale(Locale(identifier: "ko_KR"))))
+            Text(date.formatted(.dateTime.month(.defaultDigits).locale(.korean)))
                 .font(.system(.caption, design: .rounded).weight(.bold))
                 .foregroundStyle(AppTheme.primary)
             Text("\(Calendar.current.component(.day, from: date))")
                 .scaledFont(size: 34, weight: .heavy, design: .rounded)
-            Text(date.formatted(.dateTime.weekday(.wide).locale(Locale(identifier: "ko_KR"))))
+            Text(date.formatted(.dateTime.weekday(.wide).locale(.korean)))
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(.secondary)
         }
@@ -192,7 +192,7 @@ private struct MediumScheduleView: View {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(nextGroup.date.formatted(
                             .dateTime.month(.defaultDigits).day().weekday(.short)
-                                .locale(Locale(identifier: "ko_KR"))
+                                .locale(.korean)
                         ))
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(.secondary)

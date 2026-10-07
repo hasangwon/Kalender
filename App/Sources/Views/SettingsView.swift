@@ -2,11 +2,10 @@ import SwiftUI
 import UniformTypeIdentifiers
 import WidgetKit
 
-/// 설정 — 반복 유형별 일정 색 (8색 팔레트, 중복 허용)
+/// 설정 — 테마/배경색, 일정 유형별 기본 색, 글자 크기, 달력 넘기기, 알림, 백업
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-
 
     @State private var themeColor = ThemeSettings.current
     @State private var backgroundColor = BackgroundSettings.current
@@ -87,28 +86,15 @@ struct SettingsView: View {
     private var themeCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("테마색")
-                .font(.system(.headline, design: .rounded).weight(.bold))
+                .cardTitleFont()
 
             LazyVGrid(columns: Self.swatchColumns, spacing: 10) {
                 ForEach(ThemeColor.allCases) { theme in
-                    Button {
+                    ColorSwatchButton(color: theme.color, isSelected: themeColor == theme, label: theme.label) {
                         themeColor = theme
                         ThemeSettings.setCurrent(theme)
                         WidgetCenter.shared.reloadAllTimelines()
-                    } label: {
-                        Circle()
-                            .fill(theme.color)
-                            .frame(width: 28, height: 28)
-                            .overlay {
-                                if themeColor == theme {
-                                    Image(systemName: "checkmark")
-                                        .font(.caption2.bold())
-                                        .foregroundStyle(.white)
-                                }
-                            }
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(theme.label)
                 }
             }
 
@@ -119,7 +105,7 @@ struct SettingsView: View {
             Divider()
 
             Text("배경색")
-                .font(.system(.headline, design: .rounded).weight(.bold))
+                .cardTitleFont()
 
             LazyVGrid(columns: Self.swatchColumns, spacing: 10) {
                 ForEach(BackgroundColor.allCases) { background in
@@ -158,15 +144,13 @@ struct SettingsView: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
-        .padding(18)
-        .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.04), radius: 10, y: 3)
+        .cardStyle()
     }
 
     private var colorCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("일정별 기본 색상")
-                .font(.system(.headline, design: .rounded).weight(.bold))
+                .cardTitleFont()
 
             // 유형 3개 가로 배치 — 각자 현재 색 표시, 탭하면 아래 공유 팔레트로 편집
             HStack(spacing: 8) {
@@ -180,22 +164,9 @@ struct SettingsView: View {
 
                 HStack(spacing: 10) {
                     ForEach(ColorTag.allCases) { tag in
-                        Button {
+                        ColorSwatchButton(color: tag.color, isSelected: defaultColor(for: editing) == tag, label: tag.label) {
                             setDefaultColor(tag, for: editing)
-                        } label: {
-                            Circle()
-                                .fill(tag.color)
-                                .frame(width: 28, height: 28)
-                                .overlay {
-                                    if defaultColor(for: editing) == tag {
-                                        Image(systemName: "checkmark")
-                                            .font(.caption2.bold())
-                                            .foregroundStyle(.white)
-                                    }
-                                }
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(tag.label)
                     }
                 }
             }
@@ -204,9 +175,7 @@ struct SettingsView: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
-        .padding(18)
-        .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.04), radius: 10, y: 3)
+        .cardStyle()
     }
 
     private func typeChip(_ option: Recurrence) -> some View {
@@ -262,7 +231,7 @@ struct SettingsView: View {
     private var textSizeCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("글자 크기")
-                .font(.system(.headline, design: .rounded).weight(.bold))
+                .cardTitleFont()
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("앱")
@@ -291,21 +260,29 @@ struct SettingsView: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
-        .padding(18)
-        .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.04), radius: 10, y: 3)
+        .cardStyle()
     }
 
     private func sizeSelector(
         selection: TextSizeOption,
         onSelect: @escaping (TextSizeOption) -> Void
     ) -> some View {
+        optionSelector(TextSizeOption.allCases, selection: selection, label: \.label, onSelect: onSelect)
+    }
+
+    /// 가로로 균등 분할된 선택 버튼 줄 (글자 크기·넘기기 방향 공용)
+    private func optionSelector<Option: Identifiable & Equatable>(
+        _ options: [Option],
+        selection: Option,
+        label: @escaping (Option) -> String,
+        onSelect: @escaping (Option) -> Void
+    ) -> some View {
         HStack(spacing: 8) {
-            ForEach(TextSizeOption.allCases) { option in
+            ForEach(options) { option in
                 Button {
                     onSelect(option)
                 } label: {
-                    Text(option.label)
+                    Text(label(option))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(selection == option ? .white : .primary)
                         .frame(maxWidth: .infinity)
@@ -323,41 +300,24 @@ struct SettingsView: View {
     private var swipeCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("달력 넘기기")
-                .font(.system(.headline, design: .rounded).weight(.bold))
+                .cardTitleFont()
 
-            HStack(spacing: 8) {
-                ForEach(MonthSwipeDirection.allCases) { option in
-                    Button {
-                        swipeDirection = option
-                        MonthSwipeSettings.setCurrent(option)
-                    } label: {
-                        Text(option.label)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(swipeDirection == option ? .white : .primary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 9)
-                            .background(
-                                RoundedRectangle(cornerRadius: 11)
-                                    .fill(swipeDirection == option ? AppTheme.primary : Color.primary.opacity(0.06))
-                            )
-                    }
-                    .buttonStyle(.plain)
-                }
+            optionSelector(MonthSwipeDirection.allCases, selection: swipeDirection, label: \.label) { option in
+                swipeDirection = option
+                MonthSwipeSettings.setCurrent(option)
             }
 
             Text("왼쪽·위로 밀면 다음 달, 오른쪽·아래로 밀면 이전 달로 넘어가요.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
-        .padding(18)
-        .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.04), radius: 10, y: 3)
+        .cardStyle()
     }
 
     private var backupCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("백업")
-                .font(.system(.headline, design: .rounded).weight(.bold))
+                .cardTitleFont()
 
             HStack(spacing: 8) {
                 backupButton("내보내기", systemImage: "square.and.arrow.up") {
@@ -376,9 +336,7 @@ struct SettingsView: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
-        .padding(18)
-        .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.04), radius: 10, y: 3)
+        .cardStyle()
     }
 
     private func backupButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
@@ -409,7 +367,7 @@ struct SettingsView: View {
     private var notificationCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("알림")
-                .font(.system(.headline, design: .rounded).weight(.bold))
+                .cardTitleFont()
 
             DatePicker(
                 "하루 알림 시간",
@@ -430,10 +388,6 @@ struct SettingsView: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
-        .padding(18)
-        .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.04), radius: 10, y: 3)
+        .cardStyle()
     }
-
-
 }

@@ -26,14 +26,10 @@ enum MonthSwipeSettings {
     private static let key = "calendar.monthSwipeDirection"
 
     static var current: MonthSwipeDirection {
-        guard let raw = SharedDefaults.store.string(forKey: key),
-              let direction = MonthSwipeDirection(rawValue: raw)
-        else { return .horizontal }
-
-        return direction
+        SharedDefaults.value(forKey: key, default: .horizontal)
     }
 
     static func setCurrent(_ direction: MonthSwipeDirection) {
-        SharedDefaults.store.set(direction.rawValue, forKey: key)
+        SharedDefaults.set(direction, forKey: key)
     }
 }

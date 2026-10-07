@@ -6,3 +6,15 @@ import Foundation
 enum SharedDefaults {
     static let store: UserDefaults = UserDefaults(suiteName: SharedConstants.appGroupID) ?? .standard
 }
+
+extension SharedDefaults {
+    /// 문자열 원시값으로 저장한 enum 읽기 — 없거나 알 수 없는 값이면 기본값
+    static func value<T: RawRepresentable>(forKey key: String, default defaultValue: T) -> T
+    where T.RawValue == String {
+        store.string(forKey: key).flatMap(T.init(rawValue:)) ?? defaultValue
+    }
+
+    static func set<T: RawRepresentable>(_ value: T, forKey key: String) where T.RawValue == String {
+        store.set(value.rawValue, forKey: key)
+    }
+}

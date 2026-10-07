@@ -69,15 +69,7 @@ struct MonthYearPickerView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.footnote.weight(.bold))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 30, height: 30)
-                            .background(Color.primary.opacity(0.05), in: Circle())
-                    }
+                    SheetCloseButton()
                 }
             }
             .toolbarBackground(AppTheme.background, for: .navigationBar)

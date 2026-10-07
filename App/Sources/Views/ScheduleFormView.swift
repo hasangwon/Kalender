@@ -1,6 +1,5 @@
 import SwiftData
 import SwiftUI
-import WidgetKit
 
 /// 일정 추가/수정 폼 (schedule이 있으면 수정 모드)
 struct ScheduleFormView: View {
@@ -69,126 +68,11 @@ struct ScheduleFormView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    TextField("제목", text: $title)
-                    TextField("메모 (선택)", text: $memo, axis: .vertical)
-                        .lineLimit(1...4)
-                }
-
-                Section {
-                    DatePicker("날짜", selection: $date, displayedComponents: .date)
-                    Toggle("시간 설정", isOn: $hasTime.animation())
-                    if hasTime {
-                        DatePicker("시간", selection: $time, displayedComponents: .hourAndMinute)
-                    }
-
-                    Toggle("알림 받기", isOn: $notifies)
-                        .onChange(of: notifies) { _, isOn in
-                            if isOn {
-                                NotificationManager.requestAuthorizationIfNeeded()
-                            }
-                        }
-                } footer: {
-                    Text(notifies ? "이 일정이 있는 날, 설정한 시간에 하루 일정을 모아 알려드려요." : "")
-                }
-
-                Section {
-                    Picker("반복", selection: $recurrence) {
-                        ForEach(Recurrence.allCases) { option in
-                            Text(option.label).tag(option)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-
-                    // 매달 반복은 "말일 기준"으로 반복할 수 있음 (30/31일 없는 달 대응)
-                    if recurrence == .monthly {
-                        Toggle("매달 말일에 반복", isOn: $monthlyOnLastDay.animation())
-                    }
-
-                    // 매주/매달 반복에서만 종료일 지정 가능
-                    if recurrence != .none {
-                        Toggle("종료 날짜 지정", isOn: $hasEndDate.animation())
-
-                        if hasEndDate {
-                            DatePicker(
-                                "종료 날짜",
-                                selection: $endDate,
-                                in: date...,
-                                displayedComponents: .date
-                            )
-                        }
-                    }
-                } header: {
-                    Text("반복")
-                } footer: {
-                    Text(recurrenceFooter)
-                }
-                .onChange(of: date) { _, newDate in
-                    // 종료일은 시작일보다 앞설 수 없음
-                    if endDate < newDate { endDate = newDate }
-                }
-                .onChange(of: recurrence) { _, newValue in
-                    if newValue == .none { hasEndDate = false }
-                    if newValue != .monthly { monthlyOnLastDay = false }
-                }
-
-                Section {
-                    Button {
-                        withAnimation(.snappy(duration: 0.2)) { isColorExpanded.toggle() }
-                    } label: {
-                        HStack {
-                            Text("표시 색")
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            Circle()
-                                .fill(effectiveColor.color)
-                                .frame(width: 16, height: 16)
-                            Image(systemName: "chevron.down")
-                                .font(.caption2.weight(.bold))
-                                .foregroundStyle(.tertiary)
-                                .rotationEffect(.degrees(isColorExpanded ? 180 : 0))
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-
-                    if isColorExpanded {
-                        HStack(spacing: 10) {
-                            ForEach(ColorTag.allCases) { tag in
-                                Button {
-                                    // 유형 기본 색을 고르면 "기본 따름"으로 되돌림
-                                    pickedColor = tag == typeDefaultColor ? nil : tag
-                                } label: {
-                                    Circle()
-                                        .fill(tag.color)
-                                        .frame(width: 28, height: 28)
-                                        .overlay {
-                                            if effectiveColor == tag {
-                                                Image(systemName: "checkmark")
-                                                    .font(.caption2.bold())
-                                                    .foregroundStyle(.white)
-                                            }
-                                        }
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityLabel(tag.label)
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 4)
-                    }
-                } footer: {
-                    Text(pickedColor == nil ? "일정 유형의 기본 색을 따르고 있습니다." : "이 일정만 개별 색을 사용합니다.")
-                }
-
-                if isEditing {
-                    Section {
-                        Button("일정 삭제", role: .destructive) {
-                            isConfirmingDelete = true
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                }
+                titleSection
+                dateSection
+                recurrenceSection
+                colorSection
+                deleteSection
             }
             .fontDesign(.rounded)
             .dynamicTypeSize(TextSizeSettings.current.dynamicTypeSize)
@@ -214,6 +98,127 @@ struct ScheduleFormView: View {
         .presentationDetents([.large])
     }
 
+    // MARK: - 섹션
+
+    private var titleSection: some View {
+        Section {
+            TextField("제목", text: $title)
+            TextField("메모 (선택)", text: $memo, axis: .vertical)
+                .lineLimit(1...4)
+        }
+    }
+
+    private var dateSection: some View {
+        Section {
+            DatePicker("날짜", selection: $date, displayedComponents: .date)
+            Toggle("시간 설정", isOn: $hasTime.animation())
+            if hasTime {
+                DatePicker("시간", selection: $time, displayedComponents: .hourAndMinute)
+            }
+
+            Toggle("알림 받기", isOn: $notifies)
+                .onChange(of: notifies) { _, isOn in
+                    if isOn {
+                        NotificationManager.requestAuthorizationIfNeeded()
+                    }
+                }
+        } footer: {
+            Text(notifies ? "이 일정이 있는 날, 설정한 시간에 하루 일정을 모아 알려드려요." : "")
+        }
+    }
+
+    private var recurrenceSection: some View {
+        Section {
+            Picker("반복", selection: $recurrence) {
+                ForEach(Recurrence.allCases) { option in
+                    Text(option.label).tag(option)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            // 매달 반복은 "말일 기준"으로 반복할 수 있음 (30/31일 없는 달 대응)
+            if recurrence == .monthly {
+                Toggle("매달 말일에 반복", isOn: $monthlyOnLastDay.animation())
+            }
+
+            // 매주/매달 반복에서만 종료일 지정 가능
+            if recurrence != .none {
+                Toggle("종료 날짜 지정", isOn: $hasEndDate.animation())
+
+                if hasEndDate {
+                    DatePicker(
+                        "종료 날짜",
+                        selection: $endDate,
+                        in: date...,
+                        displayedComponents: .date
+                    )
+                }
+            }
+        } header: {
+            Text("반복")
+        } footer: {
+            Text(recurrenceFooter)
+        }
+        .onChange(of: date) { _, newDate in
+            // 종료일은 시작일보다 앞설 수 없음
+            if endDate < newDate { endDate = newDate }
+        }
+        .onChange(of: recurrence) { _, newValue in
+            if newValue == .none { hasEndDate = false }
+            if newValue != .monthly { monthlyOnLastDay = false }
+        }
+    }
+
+    private var colorSection: some View {
+        Section {
+            Button {
+                withAnimation(.snappy(duration: 0.2)) { isColorExpanded.toggle() }
+            } label: {
+                HStack {
+                    Text("표시 색")
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Circle()
+                        .fill(effectiveColor.color)
+                        .frame(width: 16, height: 16)
+                    Image(systemName: "chevron.down")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.tertiary)
+                        .rotationEffect(.degrees(isColorExpanded ? 180 : 0))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if isColorExpanded {
+                HStack(spacing: 10) {
+                    ForEach(ColorTag.allCases) { tag in
+                        ColorSwatchButton(color: tag.color, isSelected: effectiveColor == tag, label: tag.label) {
+                            // 유형 기본 색을 고르면 "기본 따름"으로 되돌림
+                            pickedColor = tag == typeDefaultColor ? nil : tag
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 4)
+            }
+        } footer: {
+            Text(pickedColor == nil ? "일정 유형의 기본 색을 따르고 있습니다." : "이 일정만 개별 색을 사용합니다.")
+        }
+    }
+
+    @ViewBuilder
+    private var deleteSection: some View {
+        if isEditing {
+            Section {
+                Button("일정 삭제", role: .destructive) {
+                    isConfirmingDelete = true
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
     private var typeDefaultColor: ColorTag {
         EventColorSettings.color(for: recurrence)
     }
@@ -227,7 +232,7 @@ struct ScheduleFormView: View {
         case .none:
             return "선택한 날짜에 한 번만 표시됩니다."
         case .weekly:
-            let weekday = date.formatted(.dateTime.weekday(.wide).locale(Locale(identifier: "ko_KR")))
+            let weekday = date.formatted(.dateTime.weekday(.wide).locale(.korean))
             return "선택한 날짜부터 \(weekday)마다 반복됩니다."
         case .monthly:
             if monthlyOnLastDay {
@@ -291,9 +296,7 @@ struct ScheduleFormView: View {
             modelContext.insert(schedule)
         }
 
-        try? modelContext.save()
-        WidgetCenter.shared.reloadAllTimelines()
-        NotificationManager.refresh(context: modelContext)
+        modelContext.commitChanges(refreshesNotifications: true)
         dismiss()
     }
 
@@ -301,9 +304,7 @@ struct ScheduleFormView: View {
         guard let schedule = editingSchedule else { return }
 
         modelContext.delete(schedule)
-        try? modelContext.save()
-        WidgetCenter.shared.reloadAllTimelines()
-        NotificationManager.refresh(context: modelContext)
+        modelContext.commitChanges(refreshesNotifications: true)
         dismiss()
     }
 }

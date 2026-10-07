@@ -1,7 +1,6 @@
 import StoreKit
 import SwiftData
 import SwiftUI
-import WidgetKit
 
 struct CalendarView: View {
     @Environment(\.modelContext) private var modelContext
@@ -32,22 +31,16 @@ struct CalendarView: View {
 
     private let calendar = Calendar.current
 
+    private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
+
     /// 툴바 아이콘 크기 — 나브바 높이 고정이라 배율 대신 기기별 고정값
     private var toolbarIconSize: CGFloat {
-        #if os(iOS)
-        return UIDevice.current.userInterfaceIdiom == .pad ? 27 : 18
-        #else
-        return 18
-        #endif
+        isPad ? 27 : 18
     }
 
     /// 툴바 타이틀 크기
     private var toolbarTitleSize: CGFloat {
-        #if os(iOS)
-        return UIDevice.current.userInterfaceIdiom == .pad ? 30 : 20
-        #else
-        return 20
-        #endif
+        isPad ? 30 : 20
     }
 
     var body: some View {
@@ -101,11 +94,7 @@ struct CalendarView: View {
 
     /// iPad에서 상단바를 더 높게 (시스템 나브바는 높이 고정이라 커스텀으로 대체)
     private var topBarHeight: CGFloat {
-        #if os(iOS)
-        return UIDevice.current.userInterfaceIdiom == .pad ? 76 : 50
-        #else
-        return 50
-        #endif
+        isPad ? 76 : 50
     }
 
     private var topBar: some View {
@@ -191,7 +180,7 @@ struct CalendarView: View {
                 isShowingMonthPicker = true
             } label: {
                 HStack(spacing: 4) {
-                    Text(displayedMonth.formatted(.dateTime.year().month(.wide).locale(Locale(identifier: "ko_KR"))))
+                    Text(displayedMonth.formatted(.dateTime.year().month(.wide).locale(.korean)))
                         .font(.system(size: 22 * textSize.scale, weight: .heavy, design: .rounded))
                         .foregroundStyle(.primary)
                     Image(systemName: "chevron.down")
@@ -230,11 +219,7 @@ struct CalendarView: View {
 
     /// iPad에서만 월 헤더 영역 높이를 넉넉하게
     private var monthHeaderVerticalPadding: CGFloat {
-        #if os(iOS)
-        return UIDevice.current.userInterfaceIdiom == .pad ? 22 : 0
-        #else
-        return 0
-        #endif
+        isPad ? 22 : 0
     }
 
     private func monthNavButton(systemName: String, action: @escaping () -> Void) -> some View {
@@ -443,91 +428,103 @@ struct CalendarView: View {
         let staticEvents = dayEvents.filter { $0.kind != .schedule }
 
         return VStack(spacing: 0) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(selectedDate.formatted(
-                    .dateTime.month().day().weekday(.wide).locale(Locale(identifier: "ko_KR"))
-                ))
-                .font(.system(size: 17 * textSize.scale, weight: .bold, design: .rounded))
-
-                Text(Lunar.text(for: selectedDate))
-                    .font(.system(size: 11 * textSize.scale, weight: .regular, design: .rounded))
-                    .foregroundStyle(.tertiary)
-
-                Spacer()
-
-                Text("\(dayEvents.count)개")
-                    .font(.system(size: 13 * textSize.scale, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 12)
-            .padding(.bottom, 8)
+            dayHeader(eventCount: dayEvents.count)
 
             if dayEvents.isEmpty {
-                Button {
-                    isAddingSchedule = true
-                } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: "plus")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(AppTheme.primary)
-                            .frame(width: 34, height: 34)
-                            .background(AppTheme.primary.opacity(0.12), in: Circle())
-
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text("일정이 없어요")
-                                .font(.subheadline.weight(.bold))
-                                .foregroundStyle(.primary)
-                            Text("탭해서 일정을 추가해 보세요")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-                    }
-                    .padding(14)
-                    .background(cardBackground())
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 16)
+                emptyDayButton
 
                 Spacer(minLength: 0)
             } else {
-                ScrollView {
-                    LazyVStack(spacing: 8) {
-                        ForEach(staticEvents) { event in
-                            staticEventCard(event)
-                                .onTapGesture {
-                                    if event.kind == .appleCalendar {
-                                        toastMessage = "이 일정은 애플 달력 앱에서 수정할 수 있어요"
-                                    }
-                                }
-                        }
-
-                        ForEach(daySchedules) { schedule in
-                            scheduleCard(schedule)
-                        }
-
-                        Button {
-                            isAddingSchedule = true
-                        } label: {
-                            Label("일정 추가", systemImage: "plus")
-                                .font(.subheadline.weight(.bold))
-                                .foregroundStyle(AppTheme.primary)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .strokeBorder(AppTheme.primary.opacity(0.35), style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
-                                )
-                        }
-                        .padding(.top, 2)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 20)
-                }
+                dayEventList(staticEvents: staticEvents, schedules: daySchedules)
             }
+        }
+    }
+
+    private func dayHeader(eventCount: Int) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(selectedDate.formatted(
+                .dateTime.month().day().weekday(.wide).locale(.korean)
+            ))
+            .font(.system(size: 17 * textSize.scale, weight: .bold, design: .rounded))
+
+            Text(Lunar.text(for: selectedDate))
+                .font(.system(size: 11 * textSize.scale, weight: .regular, design: .rounded))
+                .foregroundStyle(.tertiary)
+
+            Spacer()
+
+            Text("\(eventCount)개")
+                .font(.system(size: 13 * textSize.scale, weight: .semibold, design: .rounded))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+    }
+
+    private var emptyDayButton: some View {
+        Button {
+            isAddingSchedule = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "plus")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(AppTheme.primary)
+                    .frame(width: 34, height: 34)
+                    .background(AppTheme.primary.opacity(0.12), in: Circle())
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("일정이 없어요")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.primary)
+                    Text("탭해서 일정을 추가해 보세요")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+            }
+            .padding(14)
+            .background(cardBackground())
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 16)
+    }
+
+    private func dayEventList(staticEvents: [DayEvent], schedules: [Schedule]) -> some View {
+        ScrollView {
+            LazyVStack(spacing: 8) {
+                ForEach(staticEvents) { event in
+                    staticEventCard(event)
+                        .onTapGesture {
+                            if event.kind == .appleCalendar {
+                                toastMessage = "이 일정은 애플 달력 앱에서 수정할 수 있어요"
+                            }
+                        }
+                }
+
+                ForEach(schedules) { schedule in
+                    scheduleCard(schedule)
+                }
+
+                Button {
+                    isAddingSchedule = true
+                } label: {
+                    Label("일정 추가", systemImage: "plus")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(AppTheme.primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .strokeBorder(AppTheme.primary.opacity(0.35), style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+                        )
+                }
+                .padding(.top, 2)
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 20)
         }
     }
 
@@ -725,9 +722,7 @@ struct CalendarView: View {
 
     private func deleteSchedule(_ schedule: Schedule) {
         modelContext.delete(schedule)
-        try? modelContext.save()
-        WidgetCenter.shared.reloadAllTimelines()
-        NotificationManager.refresh(context: modelContext)
+        modelContext.commitChanges(refreshesNotifications: true)
     }
 }
 

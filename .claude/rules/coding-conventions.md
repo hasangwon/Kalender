@@ -22,7 +22,7 @@
 - 열거형 원시값 저장 패턴: SwiftData에는 `xxxRaw: String` 저장 + 계산 프로퍼티로 노출
   (`Schedule.recurrence` / `Schedule.color` 참조)
 - 날짜 연산은 반드시 `Calendar` API 사용 — `86400`초 더하기 금지 (DST/윤초)
-- 사용자 노출 문자열은 한국어, 날짜 포맷은 `Locale(identifier: "ko_KR")` 명시
+- 사용자 노출 문자열은 한국어, 날짜 포맷은 `.locale(.korean)` 명시 (`Locale.korean` = ko_KR)
 
 ## 2. SwiftUI 컴포넌트 규칙
 
@@ -38,11 +38,13 @@
 - 월 그리드처럼 무거운 하위 뷰가 있는 화면에서 매 프레임 바뀌는 상태(드래그 거리 등)는 작은 하위 뷰로 분리
 - 움직이는 콘텐츠에 `.brightness`/`.blur` 등 필터나 콘텐츠 전체 `.shadow` 금지 — 매 프레임 오프스크린 렌더링
 - 색상/스타일 하드코딩보다 시스템 시맨틱 컬러 우선 (`Color(.systemBackground)` 등)
+- 공용 UI는 `App/Sources/Views/CommonComponents.swift` 재사용 — `.cardStyle()`, `.cardTitleFont()`, `SheetCloseButton`, `ColorSwatchButton`
+- enum 설정값 저장/로드는 `SharedDefaults.value(forKey:default:)` / `SharedDefaults.set(_:forKey:)`
 
 ## 3. SwiftData 규칙
 
 - 모델 변경(마이그레이션 유발) 시 신중히 — 필드 추가는 기본값 필수
-- 저장은 명시적 `try? modelContext.save()` 후 `WidgetCenter.shared.reloadAllTimelines()`
+- 저장은 `modelContext.commitChanges(refreshesNotifications:)` — 내부에서 `save()` + `WidgetCenter.shared.reloadAllTimelines()`
 - 위젯 등 뷰 밖에서는 `ModelContext(container)` 생성해 동기 fetch
 - 필터/정렬 로직은 `ScheduleStore`에 모은다 — 뷰에 흩뿌리지 말 것
 

@@ -184,7 +184,7 @@ struct SearchView: View {
     /// 반복 일정은 "첫 일정 날짜" 안내
     private func dateText(_ schedule: Schedule) -> String {
         let base = schedule.startDate.formatted(
-            .dateTime.year().month().day().locale(Locale(identifier: "ko_KR"))
+            .dateTime.year().month().day().locale(.korean)
         )
 
         switch schedule.recurrence {

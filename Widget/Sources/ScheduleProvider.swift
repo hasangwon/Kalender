@@ -127,7 +127,7 @@ struct ScheduleProvider: TimelineProvider {
             today: today,
             upcoming: upcoming,
             monthTitle: monthStart.formatted(
-                .dateTime.month(.wide).locale(Locale(identifier: "ko_KR"))
+                .dateTime.month(.wide).locale(.korean)
             ),
             leadingBlanks: leadingBlanks,
             monthCells: monthCells

@@ -19,14 +19,10 @@ enum EventColorSettings {
     }
 
     static func color(for recurrence: Recurrence) -> ColorTag {
-        guard let raw = SharedDefaults.store.string(forKey: key(for: recurrence)),
-              let tag = ColorTag(rawValue: raw)
-        else { return defaultColor(for: recurrence) }
-
-        return tag
+        SharedDefaults.value(forKey: key(for: recurrence), default: defaultColor(for: recurrence))
     }
 
     static func setColor(_ tag: ColorTag, for recurrence: Recurrence) {
-        SharedDefaults.store.set(tag.rawValue, forKey: key(for: recurrence))
+        SharedDefaults.set(tag, forKey: key(for: recurrence))
     }
 }

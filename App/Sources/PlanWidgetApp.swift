@@ -12,7 +12,7 @@ struct PlanWidgetApp: App {
             CalendarView()
                 .environmentObject(appleCalendar)
                 // 날짜/시간 피커의 AM/PM → 오전/오후 등 한국어 표기 고정
-                .environment(\.locale, Locale(identifier: "ko_KR"))
+                .environment(\.locale, .korean)
                 .onAppear {
                     ReviewRequester.recordFirstLaunchIfNeeded()
                     InterfaceStyle.apply()

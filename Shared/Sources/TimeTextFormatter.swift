@@ -5,7 +5,7 @@ import Foundation
 enum TimeTextFormatter {
     static let shared: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.locale = .korean
         formatter.dateFormat = "a h:mm"
         // 실행 중 기기 시간대가 바뀌어도 Calendar.current와 맞게 따라간다
         formatter.timeZone = .autoupdatingCurrent

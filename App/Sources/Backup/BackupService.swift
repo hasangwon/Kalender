@@ -1,7 +1,6 @@
 import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
-import WidgetKit
 
 extension UTType {
     /// 내보내기 타입 1 (.hscal, JSON)
@@ -73,9 +72,7 @@ enum BackupService {
         }
 
         if result.added > 0 {
-            try? context.save()
-            WidgetCenter.shared.reloadAllTimelines()
-            NotificationManager.refresh(context: context)
+            context.commitChanges(refreshesNotifications: true)
         }
         return result
     }

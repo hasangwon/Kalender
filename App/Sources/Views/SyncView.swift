@@ -3,7 +3,6 @@ import WidgetKit
 
 /// 동기화 설정 화면 — iCloud 동기화 + 애플 달력 연동 (각각 on/off)
 struct SyncView: View {
-    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var appleCalendar: AppleCalendarManager
 
     @State private var iCloudEnabled = SyncSettings.iCloudEnabled
@@ -25,15 +24,7 @@ struct SyncView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.footnote.weight(.bold))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 30, height: 30)
-                            .background(Color.primary.opacity(0.05), in: Circle())
-                    }
+                    SheetCloseButton()
                 }
             }
             .toolbarBackground(AppTheme.background, for: .navigationBar)
@@ -68,9 +59,7 @@ struct SyncView: View {
                     .foregroundStyle(AppTheme.primary)
             }
         }
-        .padding(18)
-        .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.04), radius: 10, y: 3)
+        .cardStyle()
     }
 
     // MARK: - 애플 달력 연동
@@ -115,8 +104,6 @@ struct SyncView: View {
                     .foregroundStyle(.red)
             }
         }
-        .padding(18)
-        .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.04), radius: 10, y: 3)
+        .cardStyle()
     }
 }

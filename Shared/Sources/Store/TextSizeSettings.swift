@@ -79,15 +79,11 @@ enum WidgetTextSizeSettings {
     private static let key = "theme.widgetTextSize"
 
     static var current: TextSizeOption {
-        guard let raw = SharedDefaults.store.string(forKey: key),
-              let option = TextSizeOption(rawValue: raw)
-        else { return .medium }
-
-        return option
+        SharedDefaults.value(forKey: key, default: .medium)
     }
 
     static func setCurrent(_ option: TextSizeOption) {
-        SharedDefaults.store.set(option.rawValue, forKey: key)
+        SharedDefaults.set(option, forKey: key)
     }
 }
 
@@ -96,20 +92,19 @@ enum TextSizeSettings {
 
     /// 저장값이 없으면 기기별 기본 (iPad는 한 단계 크게)
     static var current: TextSizeOption {
-        if let raw = SharedDefaults.store.string(forKey: key),
-           let option = TextSizeOption(rawValue: raw) {
-            return option
-        }
+        SharedDefaults.value(forKey: key, default: deviceDefault)
+    }
 
+    static func setCurrent(_ option: TextSizeOption) {
+        SharedDefaults.set(option, forKey: key)
+    }
+
+    private static var deviceDefault: TextSizeOption {
         #if os(iOS)
         return isPad ? .large : .medium
         #else
         return .medium
         #endif
-    }
-
-    static func setCurrent(_ option: TextSizeOption) {
-        SharedDefaults.store.set(option.rawValue, forKey: key)
     }
 
     #if os(iOS)

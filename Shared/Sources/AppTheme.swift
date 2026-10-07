@@ -61,15 +61,11 @@ enum ThemeSettings {
     private static let key = "theme.primaryColor"
 
     static var current: ThemeColor {
-        guard let raw = SharedDefaults.store.string(forKey: key),
-              let theme = ThemeColor(rawValue: raw)
-        else { return .gold }
-
-        return theme
+        SharedDefaults.value(forKey: key, default: .gold)
     }
 
     static func setCurrent(_ theme: ThemeColor) {
-        SharedDefaults.store.set(theme.rawValue, forKey: key)
+        SharedDefaults.set(theme, forKey: key)
     }
 }
 
@@ -135,15 +131,11 @@ enum BackgroundSettings {
     private static let key = "theme.backgroundColor"
 
     static var current: BackgroundColor {
-        guard let raw = SharedDefaults.store.string(forKey: key),
-              let background = BackgroundColor(rawValue: raw)
-        else { return .gray }
-
-        return background
+        SharedDefaults.value(forKey: key, default: .gray)
     }
 
     static func setCurrent(_ background: BackgroundColor) {
-        SharedDefaults.store.set(background.rawValue, forKey: key)
+        SharedDefaults.set(background, forKey: key)
     }
 }
 

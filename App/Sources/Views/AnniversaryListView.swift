@@ -1,13 +1,10 @@
 import SwiftData
 import SwiftUI
-import WidgetKit
 
 /// 매년 기념일 등록/관리 — 양력 또는 음력(자동 양력 환산)으로 매년 달력·위젯에 표시
 struct AnniversaryListView: View {
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \AnniversaryEntry.createdAt) private var anniversaries: [AnniversaryEntry]
-
 
     @State private var name = ""
     @State private var month = 1
@@ -16,6 +13,10 @@ struct AnniversaryListView: View {
     @State private var expandedID: UUID?
 
     private let calendar = Calendar.current
+
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespaces)
+    }
 
     var body: some View {
         NavigationStack {
@@ -33,15 +34,7 @@ struct AnniversaryListView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.footnote.weight(.bold))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 30, height: 30)
-                            .background(Color.primary.opacity(0.05), in: Circle())
-                    }
+                    SheetCloseButton()
                 }
             }
             .toolbarBackground(AppTheme.background, for: .navigationBar)
@@ -53,7 +46,7 @@ struct AnniversaryListView: View {
     private var inputCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("새 기념일")
-                .font(.system(.headline, design: .rounded).weight(.bold))
+                .cardTitleFont()
 
             TextField("이름 (예: 엄마 생일, 결혼기념일)", text: $name)
                 .padding(.horizontal, 14)
@@ -115,21 +108,19 @@ struct AnniversaryListView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
                     .background(
-                        name.trimmingCharacters(in: .whitespaces).isEmpty
+                        trimmedName.isEmpty
                             ? AnyShapeStyle(Color.secondary.opacity(0.35))
                             : AnyShapeStyle(AppTheme.primary),
                         in: RoundedRectangle(cornerRadius: 14)
                     )
             }
-            .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+            .disabled(trimmedName.isEmpty)
 
             Text("등록한 기념일은 매년 달력과 위젯에 자동 표시됩니다. 음력 윤달은 평달 기준으로 표시됩니다.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
-        .padding(18)
-        .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.04), radius: 10, y: 3)
+        .cardStyle()
     }
 
     private var lunarPreviewText: String {
@@ -140,7 +131,7 @@ struct AnniversaryListView: View {
         }
 
         let text = solar.formatted(
-            .dateTime.month().day().weekday(.short).locale(Locale(identifier: "ko_KR"))
+            .dateTime.month().day().weekday(.short).locale(.korean)
         )
         return "올해 양력 \(text)"
     }
@@ -158,7 +149,7 @@ struct AnniversaryListView: View {
     private var registeredSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("등록된 기념일")
-                .font(.system(.headline, design: .rounded).weight(.bold))
+                .cardTitleFont()
                 .padding(.horizontal, 4)
 
             if anniversaries.isEmpty {
@@ -258,21 +249,20 @@ struct AnniversaryListView: View {
         }
 
         return solar.formatted(
-            .dateTime.month().day().weekday(.short).locale(Locale(identifier: "ko_KR"))
+            .dateTime.month().day().weekday(.short).locale(.korean)
         )
     }
 
     private func addAnniversary() {
         let entry = AnniversaryEntry(
-            name: name.trimmingCharacters(in: .whitespaces),
+            name: trimmedName,
             month: month,
             day: day,
             isLunar: isLunar
         )
 
         modelContext.insert(entry)
-        try? modelContext.save()
-        WidgetCenter.shared.reloadAllTimelines()
+        modelContext.commitChanges(refreshesNotifications: false)
         name = ""
     }
 
@@ -281,7 +271,6 @@ struct AnniversaryListView: View {
             if expandedID == anniversary.id { expandedID = nil }
             modelContext.delete(anniversary)
         }
-        try? modelContext.save()
-        WidgetCenter.shared.reloadAllTimelines()
+        modelContext.commitChanges(refreshesNotifications: false)
     }
 }

@@ -41,6 +41,7 @@ PlanWidget.xcodeproj  ← XcodeGen 생성물 (원본은 project.yml)
 - App Group 엔타이틀먼트가 없으면(무서명 시뮬레이터 등) 로컬 저장소 폴백
   - 이때 앱과 위젯의 데이터가 분리되므로, 위젯 데이터 공유 테스트는 서명 환경에서
 - **일정을 변경하는 모든 코드는 저장 후 `WidgetCenter.shared.reloadAllTimelines()` 호출**
+  - 앱에서는 `modelContext.commitChanges(refreshesNotifications:)` 사용 (저장 + 위젯 갱신 + 일정이면 알림 재예약)
 
 ## 3. 반복 일정 모델
 
