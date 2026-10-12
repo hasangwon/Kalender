@@ -7,11 +7,19 @@ struct MonthCell: Identifiable {
     let day: Int
     let isToday: Bool
     let isHoliday: Bool
-    let title: String?
-    let colorTag: ColorTag?
+    /// 칸에 표시할 일정 (최대 2개, 앱 달력과 같은 순서)
+    let chips: [MonthChip]
+    /// 표시하지 못한 나머지 일정 수 (+N)
     let extraCount: Int
 
     var id: Int { day }
+}
+
+struct MonthChip {
+    let title: String
+    let colorTag: ColorTag?
+    /// 공휴일은 색 태그가 없어 따로 빨간색으로 칠한다 (앱과 동일)
+    let isHoliday: Bool
 }
 
 struct WidgetDayGroup: Identifiable {
@@ -40,7 +48,7 @@ struct ScheduleEntry: TimelineEntry {
         monthTitle: "8월",
         leadingBlanks: 0,
         monthCells: (1...30).map {
-            MonthCell(day: $0, isToday: $0 == 15, isHoliday: false, title: nil, colorTag: nil, extraCount: 0)
+            MonthCell(day: $0, isToday: $0 == 15, isHoliday: false, chips: [], extraCount: 0)
         }
     )
 }
@@ -112,7 +120,9 @@ struct ScheduleProvider: TimelineProvider {
 
         let monthCells: [MonthCell] = monthDays.map { dayNumber, day in
             let events = events(on: day)
-            let firstVisible = events.first { $0.kind != .holiday } ?? events.first
+            let chips = events.prefix(2).map {
+                MonthChip(title: $0.title, colorTag: $0.colorTag, isHoliday: $0.kind == .holiday)
+            }
 
             return MonthCell(
                 day: dayNumber,
@@ -120,9 +130,8 @@ struct ScheduleProvider: TimelineProvider {
                 isHoliday: events.contains { $0.kind == .holiday }
                     || calendar.component(.weekday, from: day) == 1
                     || calendar.component(.weekday, from: day) == 7,
-                title: firstVisible?.title,
-                colorTag: firstVisible?.colorTag,
-                extraCount: firstVisible == nil ? 0 : max(events.count - 1, 0)
+                chips: chips,
+                extraCount: events.count - chips.count
             )
         }
 

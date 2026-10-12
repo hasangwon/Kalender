@@ -26,12 +26,17 @@ struct CalendarView: View {
     /// 월 전환 슬라이드 방향 (true = 다음 달, 오른쪽/아래에서 들어옴)
     @State private var slideForward = true
     @State private var swipeDirection = MonthSwipeSettings.current
+    @State private var layoutStyle = CalendarLayoutSettings.current
+    @State private var eventWeight = EventTextWeightSettings.current
     /// 드래그로 넘기는 중인지 — 화면을 다시 그리지 않도록 참조 타입에 담는다
     @State private var pagerGate = MonthPagerGate()
 
     private let calendar = Calendar.current
 
     private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
+
+    /// 와이드 모드 — 달력 카드의 좌우 여백·모서리·그림자를 없애 화면 폭 전체를 쓴다
+    private var isWide: Bool { layoutStyle == .wide }
 
     /// 툴바 아이콘 크기 — 나브바 높이 고정이라 배율 대신 기기별 고정값
     private var toolbarIconSize: CGFloat {
@@ -49,7 +54,7 @@ struct CalendarView: View {
                 topBar
 
                 calendarCard
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, isWide ? 0 : 16)
                     .padding(.top, 4)
 
                 daySection
@@ -73,6 +78,8 @@ struct CalendarView: View {
                 colorRefreshID = UUID()
                 textSize = TextSizeSettings.current
                 swipeDirection = MonthSwipeSettings.current
+                layoutStyle = CalendarLayoutSettings.current
+                eventWeight = EventTextWeightSettings.current
             }) {
                 SettingsView()
             }
@@ -124,8 +131,14 @@ struct CalendarView: View {
                     Label("정보", systemImage: "info.circle")
                 }
             } label: {
-                Image(systemName: "line.3.horizontal")
-                    .font(.system(size: toolbarIconSize, weight: .semibold))
+                // SF Symbol은 막대 간격이 좁아 답답해 보여 직접 그린다.
+                // 굵기·간격을 정수 pt로 둬야 픽셀에 딱 맞아 세 막대 두께가 같게 보인다
+                VStack(spacing: isPad ? 5 : 4) {
+                    ForEach(0..<3, id: \.self) { _ in
+                        Capsule()
+                            .frame(width: isPad ? 28 : 20, height: isPad ? 3 : 2)
+                    }
+                }
                     .foregroundStyle(.primary)
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
@@ -135,11 +148,12 @@ struct CalendarView: View {
 
             Spacer()
 
-            Text("달력")
-                .font(.system(size: toolbarTitleSize, weight: .heavy, design: .rounded))
-                .foregroundStyle(AppTheme.primary)
-
-            Spacer()
+            Button("오늘") { goToToday() }
+                .font(.system(size: isPad ? 19 : 14, weight: .bold, design: .rounded))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, isPad ? 14 : 10)
+                .padding(.vertical, isPad ? 7 : 5)
+                .background(Color.primary.opacity(0.06), in: Capsule())
 
             Button {
                 isShowingSearch = true
@@ -150,6 +164,12 @@ struct CalendarView: View {
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
+        }
+        // 오른쪽 버튼이 더 많아도 제목은 화면 가운데에 고정
+        .overlay {
+            Text("달력")
+                .font(.system(size: toolbarTitleSize, weight: .heavy, design: .rounded))
+                .foregroundStyle(AppTheme.primary)
         }
         .padding(.horizontal, 12)
         .frame(height: topBarHeight)
@@ -165,16 +185,21 @@ struct CalendarView: View {
                 .frame(maxHeight: .infinity)
         }
         .padding(.vertical, 14)
-        .padding(.horizontal, 6)
-        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .padding(.horizontal, isWide ? 0 : 6)
+        .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius))
         // 그림자는 내용이 아니라 배경 도형에만 건다. 카드 전체에 걸면 월 넘기기 드래그 중
         // 움직이는 날짜 칸까지 매 프레임 다시 래스터라이즈·블러해 프레임이 크게 떨어진다.
         .background {
-            RoundedRectangle(cornerRadius: 24)
+            RoundedRectangle(cornerRadius: cardCornerRadius)
                 .fill(AppTheme.surface)
-                .shadow(color: .black.opacity(0.05), radius: 12, y: 4)
+                .shadow(color: .black.opacity(isWide ? 0 : 0.05), radius: 12, y: 4)
         }
     }
+
+    private var cardCornerRadius: CGFloat { isWide ? 0 : 24 }
+
+    /// 요일 헤더와 날짜 그리드가 같이 쓰는 좌우 여백 — 둘이 같아야 열이 맞는다
+    private var gridInset: CGFloat { isWide ? 2 : 6 }
 
     private var monthHeader: some View {
         HStack(spacing: 10) {
@@ -183,22 +208,15 @@ struct CalendarView: View {
             } label: {
                 HStack(spacing: 4) {
                     Text(displayedMonth.formatted(.dateTime.year().month(.wide).locale(.korean)))
-                        .font(.system(size: 22 * textSize.scale, weight: .heavy, design: .rounded))
+                        .font(.system(size: 22 * monthTitleScale, weight: .heavy, design: .rounded))
                         .foregroundStyle(.primary)
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 12 * textSize.scale, weight: .bold))
+                        .font(.system(size: 12 * monthTitleScale, weight: .bold))
                         .foregroundStyle(.secondary)
                 }
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-
-            Button("오늘") { goToToday() }
-                .font(.system(size: 13 * textSize.scale, weight: .bold, design: .rounded))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(Color.primary.opacity(0.06), in: Capsule())
 
             Spacer()
 
@@ -217,6 +235,12 @@ struct CalendarView: View {
                 setMonth(picked)
             }
         }
+    }
+
+    /// 월 제목 배율 — 글자 크기 단계에 거의 따라 커지지 않게 중간 단계 대비 변화량의 20%만 반영
+    private var monthTitleScale: CGFloat {
+        let base = TextSizeOption.medium.scale
+        return base + (textSize.scale - base) * 0.2
     }
 
     /// iPad에서만 월 헤더 영역 높이를 넉넉하게
@@ -244,7 +268,7 @@ struct CalendarView: View {
                     .frame(maxWidth: .infinity)
             }
         }
-        .padding(.horizontal, 6)
+        .padding(.horizontal, gridInset)
         .padding(.top, 12)
         .padding(.bottom, 4)
     }
@@ -298,7 +322,7 @@ struct CalendarView: View {
         }
         .clipped()
         .id(colorRefreshID)
-        .padding(.horizontal, 6)
+        .padding(.horizontal, gridInset)
     }
 
     private var pagedMonths: [Date] {
@@ -380,11 +404,14 @@ struct CalendarView: View {
                         if isSelected {
                             RoundedRectangle(cornerRadius: 8).fill(AppTheme.primary)
                         } else if isToday {
-                            RoundedRectangle(cornerRadius: 8).fill(AppTheme.primary.opacity(0.12))
+                            // 다른 날을 골라도 오늘이 눈에 띄게 테두리까지
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(AppTheme.primary.opacity(0.12))
+                                .strokeBorder(AppTheme.primary, lineWidth: 1.5)
                         }
                     }
 
-                // 위젯처럼 날짜 아래 일정 라벨 (최대 2개, 길면 …)
+                // 위젯처럼 날짜 아래 일정 라벨 (최대 2개, 길면 … 없이 글자 단위로 끊음)
                 // 고정 높이 영역에 담아 라벨 유무가 셀/주 높이에 영향을 주지 않게 함
                 VStack(spacing: 1.5) {
                     ForEach(dayEvents.prefix(2)) { event in
@@ -411,16 +438,14 @@ struct CalendarView: View {
     private func dayEventChip(_ event: DayEvent) -> some View {
         let tint = event.kind == .holiday ? AppTheme.holidayRed : (event.colorTag?.color ?? .secondary)
 
-        return Text(event.title)
-            .font(.system(size: 8 * textSize.scale, weight: .bold))
-            .lineLimit(1)
-            .truncationMode(.tail)
+        return CharClippedText(text: event.title)
+            // 와이드는 칸이 넓은 만큼 1pt 크게
+            .font(.system(size: (isWide ? 9 : 8) * textSize.scale, weight: eventWeight.fontWeight))
             // .brightness 필터는 칩마다 오프스크린 패스를 만들어 드래그가 끊긴다 → 색 자체를 어둡게
             .foregroundStyle(tint.darkened(by: 0.12))
             .frame(maxWidth: .infinity)
-            .padding(.horizontal, 2)
-            .padding(.vertical, 1.5)
-            .background(tint.opacity(0.18), in: RoundedRectangle(cornerRadius: 4))
+            // 여백 없이 글자 뒤에만 칠한다 (형광펜처럼) — 칸 폭을 전부 글자에 쓴다
+            .background(tint.opacity(0.1), in: RoundedRectangle(cornerRadius: 2))
     }
 
     // MARK: - 선택한 날짜 일정

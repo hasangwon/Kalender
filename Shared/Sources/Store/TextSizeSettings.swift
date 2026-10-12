@@ -63,13 +63,14 @@ enum TextSizeOption: String, CaseIterable, Identifiable {
         #endif
     }
 
-    /// 위젯 전용 배율 — 앱처럼 단계별로 확실한 차이
+    /// 위젯 전용 배율 — 앱처럼 단계별로 확실한 차이.
+    /// 작은 글씨는 위젯에서 쓸 일이 거의 없어 전체를 한 단계씩 올렸다 (작게 = 예전 중간)
     var widgetScale: CGFloat {
         switch self {
-        case .small: 0.82
-        case .medium: 1.0
-        case .large: 1.18
-        case .extraLarge: 1.38
+        case .small: 1.0
+        case .medium: 1.18
+        case .large: 1.38
+        case .extraLarge: 1.6
         }
     }
 }

@@ -3,7 +3,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 import WidgetKit
 
-/// 설정 — 테마/배경색, 일정 유형별 기본 색, 글자 크기, 달력 넘기기, 알림, 백업
+/// 설정 — 테마/배경색, 일정 유형별 기본 색, 글자 크기, 달력 모양·넘기기, 알림, 백업
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
@@ -17,7 +17,9 @@ struct SettingsView: View {
     @State private var editingRecurrence: Recurrence?
     @State private var textSize = TextSizeSettings.current
     @State private var widgetTextSize = WidgetTextSizeSettings.current
+    @State private var eventWeight = EventTextWeightSettings.current
     @State private var swipeDirection = MonthSwipeSettings.current
+    @State private var layoutStyle = CalendarLayoutSettings.current
     @State private var isImporting = false
     @State private var exportDocument: BackupDocument?
     /// 백업/가져오기 진행 중 문구 (nil이면 대기) — 진행 중엔 화면을 덮어 상태를 보여주고 중복 실행을 막는다
@@ -38,7 +40,7 @@ struct SettingsView: View {
                 VStack(spacing: 24) {
                     themeCard
                     textSizeCard
-                    swipeCard
+                    calendarCard
                     colorCard
                     notificationCard
                     backupCard
@@ -264,6 +266,22 @@ struct SettingsView: View {
             Text("앱과 위젯의 글자 크기를 따로 설정할 수 있어요.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("일정 글씨 두께")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(.secondary)
+                optionSelector(EventTextWeight.allCases, selection: eventWeight, label: \.label) { option in
+                    eventWeight = option
+                    EventTextWeightSettings.setCurrent(option)
+                    WidgetCenter.shared.reloadAllTimelines()
+                }
+                Text("일정 이름의 두께예요. 앱 달력과 위젯에 함께 적용돼요.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
         }
         .cardStyle()
     }
@@ -302,19 +320,38 @@ struct SettingsView: View {
         }
     }
 
-    private var swipeCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("달력 넘기기")
+    private var calendarCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("달력")
                 .cardTitleFont()
 
-            optionSelector(MonthSwipeDirection.allCases, selection: swipeDirection, label: \.label) { option in
-                swipeDirection = option
-                MonthSwipeSettings.setCurrent(option)
+            VStack(alignment: .leading, spacing: 8) {
+                Text("모양")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(.secondary)
+                optionSelector(CalendarLayoutStyle.allCases, selection: layoutStyle, label: \.label) { option in
+                    layoutStyle = option
+                    CalendarLayoutSettings.setCurrent(option)
+                }
+                Text("와이드는 달력을 화면 좌우 끝까지 넓게 표시해요.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
 
-            Text("왼쪽·위로 밀면 다음 달, 오른쪽·아래로 밀면 이전 달로 넘어가요.")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+            Divider()
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("넘기기")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(.secondary)
+                optionSelector(MonthSwipeDirection.allCases, selection: swipeDirection, label: \.label) { option in
+                    swipeDirection = option
+                    MonthSwipeSettings.setCurrent(option)
+                }
+                Text("왼쪽·위로 밀면 다음 달, 오른쪽·아래로 밀면 이전 달로 넘어가요.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
         }
         .cardStyle()
     }

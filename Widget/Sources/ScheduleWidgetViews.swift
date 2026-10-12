@@ -5,10 +5,20 @@ private struct WidgetTextScaleKey: EnvironmentKey {
     static let defaultValue: CGFloat = 1.0
 }
 
+private struct WidgetEventWeightKey: EnvironmentKey {
+    static let defaultValue: Font.Weight = .medium
+}
+
 extension EnvironmentValues {
     var widgetTextScale: CGFloat {
         get { self[WidgetTextScaleKey.self] }
         set { self[WidgetTextScaleKey.self] = newValue }
+    }
+
+    /// 일정 이름 글씨 두께 (설정과 연동)
+    var widgetEventWeight: Font.Weight {
+        get { self[WidgetEventWeightKey.self] }
+        set { self[WidgetEventWeightKey.self] = newValue }
     }
 }
 
@@ -62,6 +72,8 @@ struct ScheduleWidgetEntryView: View {
         content
             // 위젯 글자 크기 배율 (설정과 연동)
             .environment(\.widgetTextScale, WidgetTextSizeSettings.current.widgetScale)
+            // 일정 이름 두께 (앱 설정과 동일)
+            .environment(\.widgetEventWeight, EventTextWeightSettings.current.fontWeight)
     }
 
     @ViewBuilder
@@ -104,6 +116,7 @@ private struct DateHeader: View {
 
 private struct EventRow: View {
     let event: DayEvent
+    @Environment(\.widgetEventWeight) private var eventWeight
 
     private var barColor: Color {
         event.kind == .holiday ? AppTheme.primary : (event.colorTag?.color ?? .secondary)
@@ -117,7 +130,7 @@ private struct EventRow: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 Text(event.title)
-                    .font(.system(.caption, design: .rounded).weight(.semibold))
+                    .font(.system(.caption, design: .rounded).weight(eventWeight))
                     .lineLimit(1)
                 if let timeText = event.timeText {
                     Text(timeText)
@@ -247,6 +260,7 @@ private func makeWeekRows(leadingBlanks: Int, cells: [MonthCell]) -> [[MonthCell
 private struct CalendarGridView: View {
     let entry: ScheduleEntry
     @Environment(\.widgetTextScale) private var scale
+    @Environment(\.widgetEventWeight) private var eventWeight
 
     private let weekdaySymbols = ["일", "월", "화", "수", "목", "금", "토"]
 
@@ -308,31 +322,33 @@ private struct CalendarGridView: View {
                     }
                 }
 
-            // 날짜 아래 일정 제목 — 길면 말줄임(…), 더 있으면 +N
-            if let title = cell.title {
-                Text(title)
-                    .scaledFont(size: 7.5, weight: .bold)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .foregroundStyle(cell.colorTag?.color ?? .secondary)
-                    .brightness(-0.12)
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 1)
-                    .padding(.vertical, 1)
-                    .background(
-                        (cell.colorTag?.color ?? .secondary).opacity(0.18),
-                        in: RoundedRectangle(cornerRadius: 3)
-                    )
+            // 날짜 아래 일정 제목 최대 2줄 — 길면 … 없이 글자 단위로 끊고, 3개째부터 +N
+            ForEach(cell.chips.indices, id: \.self) { index in
+                chip(cell.chips[index])
+            }
 
-                if cell.extraCount > 0 {
-                    Text("+\(cell.extraCount)")
-                        .scaledFont(size: 7, weight: .heavy)
-                        .foregroundStyle(.secondary)
-                }
+            if cell.extraCount > 0 {
+                Text("+\(cell.extraCount)")
+                    .scaledFont(size: 6, weight: .bold)
+                    .foregroundStyle(.secondary)
             }
 
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // 칸이 낮은 달(6주)에 넘치는 부분은 잘라서 다른 주를 밀지 않게
+        .clipped()
+    }
+
+    private func chip(_ chip: MonthChip) -> some View {
+        let tint = chip.isHoliday ? AppTheme.holidayRed : (chip.colorTag?.color ?? .secondary)
+
+        return CharClippedText(text: chip.title)
+            .scaledFont(size: 7.5, weight: eventWeight)
+            .foregroundStyle(tint)
+            .brightness(-0.12)
+            .frame(maxWidth: .infinity)
+            // 여백 없이 글자 뒤에만 칠한다 (형광펜처럼) — 칸 폭을 전부 글자에 쓴다
+            .background(tint.opacity(0.1), in: RoundedRectangle(cornerRadius: 2))
     }
 }
