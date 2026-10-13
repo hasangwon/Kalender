@@ -139,7 +139,8 @@ struct CalendarView: View {
                             .frame(width: isPad ? 28 : 20, height: isPad ? 3 : 2)
                     }
                 }
-                    .foregroundStyle(.primary)
+                    // .primary는 버튼 안에서 에셋 AccentColor(골드 고정)로 그려져 테마를 안 따른다
+                    .foregroundStyle(AppTheme.primary)
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
@@ -160,7 +161,7 @@ struct CalendarView: View {
             } label: {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: toolbarIconSize, weight: .semibold))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(AppTheme.primary)
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
