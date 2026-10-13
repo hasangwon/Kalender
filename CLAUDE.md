@@ -24,6 +24,8 @@
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 
 xcodegen generate     # project.yml 변경 후 .xcodeproj 재생성 (필수)
+
+# 빌드 확인 전용 (설치 안 함)
 xcodebuild -project PlanWidget.xcodeproj -scheme PlanWidget \
   -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
 
@@ -31,7 +33,9 @@ xcodebuild -project PlanWidget.xcodeproj -scheme PlanWidget \
 ```
 
 - ⚠️ **project.yml 수정 후 `xcodegen generate` 필수** — 안 하면 Xcode 프로젝트에 반영 안 됨
-- 시뮬레이터 빌드는 `CODE_SIGNING_ALLOWED=NO` (팀 미설정 환경)
+- ⚠️ **시뮬레이터에 설치하는 빌드는 반드시 서명 빌드** (`project.yml`에 `DEVELOPMENT_TEAM` 설정됨, `CODE_SIGNING_ALLOWED=NO` 금지)
+  - 무서명 빌드는 App Group 권한이 빠져 앱·위젯 데이터가 분리되고, 서명 빌드 위에 덮어 설치하면 **App Group 컨테이너가 삭제됨**
+  - `CODE_SIGNING_ALLOWED=NO`는 설치 없이 빌드만 확인할 때(`generic/platform=iOS Simulator`)만 사용
 
 ## 타깃 / 번들 구조
 
@@ -48,7 +52,7 @@ xcodebuild -project PlanWidget.xcodeproj -scheme PlanWidget \
 - 모델: `Schedule` (제목/메모/날짜/시간 유무/반복/색상)
 - 반복: `Recurrence` — 단일(none)/매주(weekly)/매달(monthly). 발생 판정은 `Schedule.occurs(on:)`
 - 저장소: `ScheduleStore.makeContainer()` — **App Group(`group.com.hasangwon.planwidget`) 우선, 엔타이틀먼트 없으면 로컬 폴백**
-- ⚠️ 폴백 상태에선 앱↔위젯 데이터가 분리됨 (시뮬레이터 무서명 환경에서 발생)
+- ⚠️ 폴백 상태에선 앱↔위젯 데이터가 분리됨 (무서명 빌드 설치 시 발생 — 위 빌드 규칙 참조)
 - 일정 변경 후 `WidgetCenter.shared.reloadAllTimelines()` 호출 필수
 - App Group ID 변경 시 `Shared/Sources/SharedConstants.swift` + `project.yml` 두 곳 동시 수정
 

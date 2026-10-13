@@ -28,7 +28,7 @@ description: 시뮬레이터에 앱 빌드·설치·실행하고 스크린샷으
    xcrun simctl boot "$DEVICE" || true          # 이미 부팅됐으면 무시
    xcrun simctl bootstatus "$DEVICE" -b         # 부팅 완료 대기
 
-2. 해당 기기로 빌드
+2. 해당 기기로 서명 빌드 (CODE_SIGNING_ALLOWED=NO 붙이지 말 것)
    xcodebuild -project PlanWidget.xcodeproj -scheme PlanWidget \
      -destination "id=$DEVICE" build
 
@@ -60,5 +60,6 @@ description: 시뮬레이터에 앱 빌드·설치·실행하고 스크린샷으
 ## 주의사항
 
 1. **UI 변경 검증은 스크린샷까지** — 빌드 성공만으로 "동작 확인"이라고 말하지 않는다
-2. 무서명 시뮬레이터에선 App Group 미동작 → 위젯이 앱 데이터를 못 읽는 건 정상 (아키텍처 문서 참조)
+2. **설치는 반드시 서명 빌드** — 무서명 빌드를 설치하면 App Group 권한이 빠져 위젯이 일정을 못 읽고, 서명 빌드 위에 덮어 설치하면 App Group 컨테이너가 삭제된다
+   - 위젯에 일정이 안 보이면 "원래 그렇다"고 넘기지 말고, 설치된 앱의 엔타이틀먼트(`codesign -d --entitlements - "$APP"`)와 App Group 컨테이너부터 확인
 3. 위젯 확인: 홈 화면 길게 누르기 → + → "일정위젯" 검색

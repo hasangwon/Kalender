@@ -49,6 +49,8 @@ xcodebuild -project PlanWidget.xcodeproj -scheme PlanWidget \
   -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
 ```
 
+- 빌드 확인 전용이라 무서명. ⚠️ **이 산출물을 시뮬레이터에 설치하지 말 것** — App Group 컨테이너가 삭제되고 위젯이 일정을 못 읽는다. 설치는 `/simulator-run`(서명 빌드)으로
+
 ---
 
 ## 워크플로우
