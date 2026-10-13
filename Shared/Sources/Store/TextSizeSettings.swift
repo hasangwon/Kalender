@@ -73,6 +73,17 @@ enum TextSizeOption: String, CaseIterable, Identifiable {
         case .extraLarge: 1.6
         }
     }
+
+    /// 위젯 달력 날짜 숫자 배율 — 일정보다 한 단계 크게 (중간이면 크게의 배율).
+    /// 같은 배율이면 날짜가 일정 글자에 묻혀 작아 보인다
+    var widgetDayScale: CGFloat {
+        switch self {
+        case .small: 1.18
+        case .medium: 1.38
+        case .large: 1.6
+        case .extraLarge: 1.84
+        }
+    }
 }
 
 /// 위젯 글자 크기 — 앱과 독립적으로 저장 (App Group 공유)

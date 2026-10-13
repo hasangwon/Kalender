@@ -5,6 +5,10 @@ private struct WidgetTextScaleKey: EnvironmentKey {
     static let defaultValue: CGFloat = 1.0
 }
 
+private struct WidgetDayScaleKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 1.0
+}
+
 private struct WidgetEventWeightKey: EnvironmentKey {
     static let defaultValue: Font.Weight = .medium
 }
@@ -13,6 +17,12 @@ extension EnvironmentValues {
     var widgetTextScale: CGFloat {
         get { self[WidgetTextScaleKey.self] }
         set { self[WidgetTextScaleKey.self] = newValue }
+    }
+
+    /// 달력 날짜 숫자 배율 — 일정보다 한 단계 크게 (설정과 연동)
+    var widgetDayScale: CGFloat {
+        get { self[WidgetDayScaleKey.self] }
+        set { self[WidgetDayScaleKey.self] = newValue }
     }
 
     /// 일정 이름 글씨 두께 (설정과 연동)
@@ -72,6 +82,7 @@ struct ScheduleWidgetEntryView: View {
         content
             // 위젯 글자 크기 배율 (설정과 연동)
             .environment(\.widgetTextScale, WidgetTextSizeSettings.current.widgetScale)
+            .environment(\.widgetDayScale, WidgetTextSizeSettings.current.widgetDayScale)
             // 일정 이름 두께 (앱 설정과 동일)
             .environment(\.widgetEventWeight, EventTextWeightSettings.current.fontWeight)
     }
@@ -260,6 +271,7 @@ private func makeWeekRows(leadingBlanks: Int, cells: [MonthCell]) -> [[MonthCell
 private struct CalendarGridView: View {
     let entry: ScheduleEntry
     @Environment(\.widgetTextScale) private var scale
+    @Environment(\.widgetDayScale) private var dayScale
     @Environment(\.widgetEventWeight) private var eventWeight
 
     private let weekdaySymbols = ["일", "월", "화", "수", "목", "금", "토"]
@@ -303,11 +315,11 @@ private struct CalendarGridView: View {
     }
 
     private func dayCell(_ cell: MonthCell) -> some View {
-        let daySide = 16 * scale
+        let daySide = 16 * dayScale
 
         return VStack(spacing: 1) {
             Text("\(cell.day)")
-                .scaledFont(size: 10, weight: cell.isToday ? .heavy : .semibold, design: .rounded)
+                .font(.system(size: 10 * dayScale, weight: cell.isToday ? .heavy : .semibold, design: .rounded))
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
                 .foregroundStyle(
@@ -318,7 +330,7 @@ private struct CalendarGridView: View {
                 .frame(width: daySide, height: daySide)
                 .background {
                     if cell.isToday {
-                        RoundedRectangle(cornerRadius: 5 * scale).fill(AppTheme.primary)
+                        RoundedRectangle(cornerRadius: 5 * dayScale).fill(AppTheme.primary)
                     }
                 }
 
