@@ -18,6 +18,8 @@ struct CalendarView: View {
     @State private var isShowingSearch = false
     @State private var isShowingInfo = false
     @State private var isShowingSync = false
+    @State private var isShowingMenu = false
+    @State private var pendingMenuItem: MenuItem?
     @State private var toastMessage: String?
     @State private var isShowingMonthPicker = false
     @State private var textSize = TextSizeSettings.current
@@ -28,6 +30,7 @@ struct CalendarView: View {
     @State private var swipeDirection = MonthSwipeSettings.current
     @State private var layoutStyle = CalendarLayoutSettings.current
     @State private var eventWeight = EventTextWeightSettings.current
+    @State private var showsTodayLabel = LabSettings.showsTodayLabel
     /// 드래그로 넘기는 중인지 — 화면을 다시 그리지 않도록 참조 타입에 담는다
     @State private var pagerGate = MonthPagerGate()
 
@@ -83,7 +86,9 @@ struct CalendarView: View {
             }) {
                 SettingsView()
             }
-            .sheet(isPresented: $isShowingInfo) {
+            .sheet(isPresented: $isShowingInfo, onDismiss: {
+                showsTodayLabel = LabSettings.showsTodayLabel
+            }) {
                 InfoView()
             }
             .sheet(isPresented: $isShowingSync) {
@@ -106,30 +111,10 @@ struct CalendarView: View {
 
     private var topBar: some View {
         HStack {
-            Menu {
-                Button {
-                    isShowingAnniversaries = true
-                } label: {
-                    Label("매년 기념일 등록", systemImage: "gift")
-                }
-
-                Button {
-                    isShowingSync = true
-                } label: {
-                    Label("동기화", systemImage: "arrow.triangle.2.circlepath")
-                }
-
-                Button {
-                    isShowingSettings = true
-                } label: {
-                    Label("설정", systemImage: "gearshape")
-                }
-
-                Button {
-                    isShowingInfo = true
-                } label: {
-                    Label("정보", systemImage: "info.circle")
-                }
+            // 시스템 Menu는 화면 위쪽에서 버튼을 덮으며 열려, 두 번 누르면 첫 항목이 바로 눌린다.
+            // 팝오버로 버튼 아래에 띄운다
+            Button {
+                isShowingMenu = true
             } label: {
                 // SF Symbol은 막대 간격이 좁아 답답해 보여 직접 그린다.
                 // 굵기·간격을 정수 pt로 둬야 픽셀에 딱 맞아 세 막대 두께가 같게 보인다
@@ -143,6 +128,21 @@ struct CalendarView: View {
                     .foregroundStyle(AppTheme.primary)
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
+            }
+            .popover(isPresented: $isShowingMenu, arrowEdge: .top) {
+                menuList
+                    .presentationCompactAdaptation(.popover)
+            }
+            .onChange(of: isShowingMenu) { _, isShowing in
+                // 팝오버가 닫힌 뒤 시트를 띄운다 — 닫히는 중에 띄우면 표시가 무시된다
+                guard !isShowing, let item = pendingMenuItem else { return }
+                pendingMenuItem = nil
+                switch item {
+                case .anniversaries: isShowingAnniversaries = true
+                case .sync: isShowingSync = true
+                case .settings: isShowingSettings = true
+                case .info: isShowingInfo = true
+                }
             }
             // 시스템 기본 라벨이 "드래그"로 읽혀 VoiceOver용 이름을 지정
             .accessibilityLabel("메뉴")
@@ -174,6 +174,59 @@ struct CalendarView: View {
         }
         .padding(.horizontal, 12)
         .frame(height: topBarHeight)
+    }
+
+    private enum MenuItem: CaseIterable {
+        case anniversaries, sync, settings, info
+
+        var title: String {
+            switch self {
+            case .anniversaries: "매년 기념일 등록"
+            case .sync: "동기화"
+            case .settings: "설정"
+            case .info: "정보"
+            }
+        }
+
+        var systemImage: String {
+            switch self {
+            case .anniversaries: "gift"
+            case .sync: "arrow.triangle.2.circlepath"
+            case .settings: "gearshape"
+            case .info: "info.circle"
+            }
+        }
+    }
+
+    private var menuList: some View {
+        VStack(spacing: 0) {
+            ForEach(MenuItem.allCases, id: \.self) { item in
+                if item != MenuItem.allCases.first {
+                    Divider()
+                }
+                Button {
+                    pendingMenuItem = item
+                    isShowingMenu = false
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: item.systemImage)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(AppTheme.primary)
+                            .frame(width: 24)
+                        Text(item.title)
+                            .font(.system(size: 17, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.primary)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 18)
+                    .frame(height: 50)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .frame(width: 230)
+        .dynamicTypeSize(textSize.dynamicTypeSize)
     }
 
     // MARK: - 달력 카드
@@ -392,25 +445,36 @@ struct CalendarView: View {
             }
         } label: {
             VStack(spacing: 2) {
-                Text("\(calendar.component(.day, from: day))")
-                    .font(.system(size: 13 * textSize.scale, weight: isToday || isSelected ? .heavy : .semibold, design: .rounded))
-                    .foregroundStyle(
-                        isSelected ? Color.white
-                            : isHoliday || weekday == 1 || weekday == 7 ? AppTheme.holidayRed
-                            : isToday ? AppTheme.primary
-                            : .primary
-                    )
-                    .frame(width: 24 * textSize.scale, height: 24 * textSize.scale)
-                    .background {
-                        if isSelected {
-                            RoundedRectangle(cornerRadius: 8).fill(AppTheme.primary)
-                        } else if isToday {
-                            // 다른 날을 골라도 오늘이 눈에 띄게 테두리까지
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(AppTheme.primary.opacity(0.12))
-                                .strokeBorder(AppTheme.primary, lineWidth: 1.5)
-                        }
+                // 실험실 "오늘 표시"를 켜면 숫자 오른쪽에 작게 "오늘".
+                // 왼쪽에 같은 폭의 투명 라벨을 둬 숫자는 다른 날짜처럼 칸 가운데에 남고,
+                // 칸이 좁으면 양쪽이 똑같이 줄어 옆 칸을 넘지 않는다
+                HStack(spacing: 2) {
+                    if isToday && showsTodayLabel {
+                        todayLabel.hidden()
                     }
+
+                    Text("\(calendar.component(.day, from: day))")
+                        .font(.system(size: 13 * textSize.scale, weight: isToday || isSelected ? .heavy : .semibold, design: .rounded))
+                        .foregroundStyle(
+                            isSelected ? Color.white
+                                : isHoliday || weekday == 1 || weekday == 7 ? AppTheme.holidayRed
+                                : isToday ? AppTheme.primary
+                                : .primary
+                        )
+                        .frame(width: 24 * textSize.scale, height: 24 * textSize.scale)
+                        .background {
+                            if isSelected {
+                                RoundedRectangle(cornerRadius: 8).fill(AppTheme.primary)
+                            } else if isToday {
+                                RoundedRectangle(cornerRadius: 8).fill(AppTheme.primary.opacity(0.12))
+                            }
+                        }
+                        .layoutPriority(1)
+
+                    if isToday && showsTodayLabel {
+                        todayLabel
+                    }
+                }
 
                 // 위젯처럼 날짜 아래 일정 라벨 (최대 2개, 길면 … 없이 글자 단위로 끊음)
                 // 고정 높이 영역에 담아 라벨 유무가 셀/주 높이에 영향을 주지 않게 함
@@ -434,6 +498,14 @@ struct CalendarView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    private var todayLabel: some View {
+        Text("오늘")
+            .font(.system(size: 8 * textSize.scale, weight: .semibold))
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
     }
 
     private func dayEventChip(_ event: DayEvent) -> some View {
