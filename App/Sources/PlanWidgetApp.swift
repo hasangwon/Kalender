@@ -1,5 +1,6 @@
 import SwiftData
 import SwiftUI
+import WidgetKit
 
 @main
 struct PlanWidgetApp: App {
@@ -17,6 +18,10 @@ struct PlanWidgetApp: App {
                     ReviewRequester.recordFirstLaunchIfNeeded()
                     InterfaceStyle.apply()
                     NotificationManager.refresh(context: ModelContext(container))
+                    #if DEBUG
+                    // 위젯 기준 날짜(debug.widgetToday)를 바꾼 뒤 앱을 열면 바로 반영되게
+                    WidgetCenter.shared.reloadAllTimelines()
+                    #endif
                 }
                 .task {
                     // 애플 달력: 사용자가 켜둔 경우만 로드

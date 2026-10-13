@@ -55,6 +55,20 @@ description: 시뮬레이터에 앱 빌드·설치·실행하고 스크린샷으
 | 시간 변경     | `xcrun simctl status_bar "$DEVICE" override --time "9:41"`  |
 | 기기 종료     | `xcrun simctl shutdown "$DEVICE"`                           |
 
+### 위젯 기준 날짜 바꾸기 (디버그 빌드 전용)
+
+시뮬레이터 설정엔 날짜 변경 메뉴가 없다. 6주짜리 달 등은 App Group 설정 `debug.widgetToday`로 확인한다.
+
+```bash
+G=$(xcrun simctl get_app_container "$DEVICE" com.hasangwon.planwidget group.com.hasangwon.planwidget)
+P="$G/Library/Preferences/group.com.hasangwon.planwidget"
+xcrun simctl spawn "$DEVICE" defaults write "$P" debug.widgetToday 2027-01-15   # 지정
+xcrun simctl launch "$DEVICE" com.hasangwon.planwidget                          # 디버그 빌드는 실행 시 위젯 reload
+xcrun simctl spawn "$DEVICE" defaults delete "$P" debug.widgetToday             # 확인 후 반드시 삭제
+```
+
+- 홈 화면에 위젯 배치(길게 누르기)는 simctl로 못 하므로 사용자에게 요청
+
 ---
 
 ## 주의사항

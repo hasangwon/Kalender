@@ -76,10 +76,23 @@ struct ScheduleProvider: TimelineProvider {
         completion(Timeline(entries: [entry], policy: .after(nextMidnight)))
     }
 
+    /// 위젯이 기준으로 삼는 오늘.
+    /// 디버그 빌드에서만 App Group 설정 `debug.widgetToday`(yyyy-MM-dd)로 바꿀 수 있다 —
+    /// 시뮬레이터는 날짜 변경 메뉴가 없어 6주짜리 달 등을 확인할 때 쓴다
+    private static var today: Date {
+        #if DEBUG
+        if let text = SharedDefaults.store.string(forKey: "debug.widgetToday"),
+           let date = try? Date(text, strategy: .iso8601.year().month().day()) {
+            return date
+        }
+        #endif
+        return .now
+    }
+
     /// 위젯 크기별로 필요한 날짜만 계산한다 — Small: 오늘, Medium: 오늘+7일, Large: 이번 달 그리드
     private func loadEntry(family: WidgetFamily) -> ScheduleEntry {
         let calendar = Calendar.current
-        let now = Date.now
+        let now = Self.today
 
         // 내일부터 7일 (Medium에서만 표시)
         let upcomingDays = family == .systemMedium
