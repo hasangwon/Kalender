@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 런처·스플래시 배경 — iOS 앱 아이콘 배경과 같은 검정. 골드 값은 common/design/colors.json themeColor.gold.light -->
+    <color name="ic_launcher_background">#000000</color>
+    <color name="splash_background">#000000</color>
+    <color name="brand_gold">#AF842F</color>
+</resources>

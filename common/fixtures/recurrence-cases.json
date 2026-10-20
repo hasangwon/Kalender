@@ -1,0 +1,22 @@
+{
+  "_comment": "반복 발생 판정 기대값 (iOS Schedule.occurs / Android Schedule.occurs). start·end·day 는 기기 시간대의 날짜. 2026-10-19 는 월요일.",
+  "cases": [
+    { "name": "단일: 같은 날", "start": "2026-10-19", "recurrence": "none", "day": "2026-10-19", "expected": true },
+    { "name": "단일: 다음 날", "start": "2026-10-19", "recurrence": "none", "day": "2026-10-20", "expected": false },
+    { "name": "단일: 시작 전", "start": "2026-10-19", "recurrence": "none", "day": "2026-10-18", "expected": false },
+    { "name": "매주: 한 주 뒤 같은 요일", "start": "2026-10-19", "recurrence": "weekly", "day": "2026-10-26", "expected": true },
+    { "name": "매주: 다른 요일", "start": "2026-10-19", "recurrence": "weekly", "day": "2026-10-27", "expected": false },
+    { "name": "매주: 시작 전 같은 요일", "start": "2026-10-19", "recurrence": "weekly", "day": "2026-10-12", "expected": false },
+    { "name": "매주: 종료일 당일(포함)", "start": "2026-10-19", "recurrence": "weekly", "end": "2026-11-09", "day": "2026-11-09", "expected": true },
+    { "name": "매주: 종료일 다음 주", "start": "2026-10-19", "recurrence": "weekly", "end": "2026-11-09", "day": "2026-11-16", "expected": false },
+    { "name": "매달: 다음 달 같은 일", "start": "2026-01-15", "recurrence": "monthly", "day": "2026-02-15", "expected": true },
+    { "name": "매달: 31일 시작은 30일까지인 달에 미발생", "start": "2026-01-31", "recurrence": "monthly", "day": "2026-04-30", "expected": false },
+    { "name": "매달: 31일 시작은 31일 있는 달에 발생", "start": "2026-01-31", "recurrence": "monthly", "day": "2026-03-31", "expected": true },
+    { "name": "매달: 31일 시작, 2월에 미발생", "start": "2026-01-31", "recurrence": "monthly", "day": "2026-02-28", "expected": false },
+    { "name": "매달 말일: 2월 말일", "start": "2026-01-15", "recurrence": "monthly", "monthlyOnLastDay": true, "day": "2026-02-28", "expected": true },
+    { "name": "매달 말일: 3월 31일", "start": "2026-01-15", "recurrence": "monthly", "monthlyOnLastDay": true, "day": "2026-03-31", "expected": true },
+    { "name": "매달 말일: 3월 30일은 아님", "start": "2026-01-15", "recurrence": "monthly", "monthlyOnLastDay": true, "day": "2026-03-30", "expected": false },
+    { "name": "매달 말일: 윤년 2월 29일", "start": "2027-12-01", "recurrence": "monthly", "monthlyOnLastDay": true, "day": "2028-02-29", "expected": true },
+    { "name": "매달: 종료일 이후 미발생", "start": "2026-01-15", "recurrence": "monthly", "end": "2026-03-15", "day": "2026-04-15", "expected": false }
+  ]
+}

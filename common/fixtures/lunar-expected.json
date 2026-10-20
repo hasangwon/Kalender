@@ -1,0 +1,31 @@
+{
+  "_comment": "음력 환산 기대값. 두 플랫폼 테스트가 공유한다. source=official 은 공휴일 공고로 확정된 값, source=icu 는 ICU 로 계산해 기록한 값(한국천문연구원과 드물게 1일 다를 수 있음).",
+  "lunarToSolar": [
+    { "year": 2025, "month": 1, "day": 1, "solar": "2025-01-29", "source": "official" },
+    { "year": 2025, "month": 4, "day": 8, "solar": "2025-05-05", "source": "official" },
+    { "year": 2025, "month": 8, "day": 15, "solar": "2025-10-06", "source": "official" },
+    { "year": 2026, "month": 1, "day": 1, "solar": "2026-02-17", "source": "official" },
+    { "year": 2026, "month": 4, "day": 8, "solar": "2026-05-24", "source": "official" },
+    { "year": 2026, "month": 8, "day": 15, "solar": "2026-09-25", "source": "official" },
+    { "year": 2027, "month": 1, "day": 1, "solar": "2027-02-07", "source": "official" },
+    { "year": 2027, "month": 4, "day": 8, "solar": "2027-05-13", "source": "official" },
+    { "year": 2027, "month": 8, "day": 15, "solar": "2027-09-15", "source": "official" },
+    { "year": 2028, "month": 1, "day": 1, "solar": "2028-01-26", "source": "icu" },
+    { "year": 2028, "month": 8, "day": 15, "solar": "2028-10-03", "source": "icu" },
+    { "year": 2029, "month": 1, "day": 1, "solar": "2029-02-13", "source": "icu" },
+    { "year": 2029, "month": 8, "day": 15, "solar": "2029-09-22", "source": "icu" }
+  ],
+  "solarToLunar": [
+    { "solar": "2025-01-29", "month": 1, "day": 1, "leap": false },
+    { "solar": "2025-10-06", "month": 8, "day": 15, "leap": false },
+    { "solar": "2026-02-17", "month": 1, "day": 1, "leap": false },
+    { "solar": "2027-09-15", "month": 8, "day": 15, "leap": false }
+  ],
+  "leapMonth": {
+    "_comment": "2025년은 윤6월이 있다. 윤달 날짜는 평달 기념일과 매칭되지 않아야 한다",
+    "solar": "2025-07-25",
+    "month": 6,
+    "day": 1,
+    "leap": true
+  }
+}

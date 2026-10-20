@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity
+            android:name=".debug.DebugWidgetHostActivity"
+            android:exported="true"
+            android:label="위젯 미리보기 (디버그)" />
+        <!-- 디버그 전용: 처음부터 중간/큰 크기로 놓이는 같은 위젯 (크기별 렌더링 확인용) -->
+        <receiver
+            android:name=".debug.DebugMediumWidgetReceiver"
+            android:exported="true"
+            android:label="달력 (디버그 4×2)">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/debug_widget_medium_info" />
+        </receiver>
+        <receiver
+            android:name=".debug.DebugLargeWidgetReceiver"
+            android:exported="true"
+            android:label="달력 (디버그 4×4)">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/debug_widget_large_info" />
+        </receiver>
+    </application>
+</manifest>

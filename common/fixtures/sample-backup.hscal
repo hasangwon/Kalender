@@ -1,0 +1,43 @@
+{
+  "anniversaries" : [
+    {
+      "createdAt" : 813000000.5,
+      "day" : 9,
+      "id" : "4B1F0D2A-5C3E-4F1A-9B8D-2E7C6A5F4D31",
+      "isLunar" : true,
+      "month" : 7,
+      "name" : "엄마 생일"
+    }
+  ],
+  "exportedAt" : 813500000.25,
+  "schedules" : [
+    {
+      "colorRaw" : "blue",
+      "createdAt" : 813000000,
+      "hasCustomColor" : false,
+      "hasTime" : true,
+      "id" : "7C9E6679-7425-40DE-944B-E07FC1F90AE7",
+      "memo" : "회의실 B",
+      "monthlyOnLastDay" : false,
+      "notifies" : true,
+      "recurrenceRaw" : "weekly",
+      "startDate" : 813034800,
+      "title" : "팀 회의"
+    },
+    {
+      "colorRaw" : "red",
+      "createdAt" : 813000001,
+      "endDate" : 820000000,
+      "hasCustomColor" : true,
+      "hasTime" : false,
+      "id" : "A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D",
+      "memo" : "",
+      "monthlyOnLastDay" : true,
+      "notifies" : false,
+      "recurrenceRaw" : "monthly",
+      "startDate" : 812998800,
+      "title" : "월말 정산"
+    }
+  ],
+  "version" : 1
+}
