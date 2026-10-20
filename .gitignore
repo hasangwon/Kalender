@@ -1,10 +1,24 @@
-# XcodeGen이 생성 (xcodegen generate로 재생성)
+# ===== iOS (ios/) =====
+# XcodeGen 생성물 — ios/ 에서 `xcodegen generate` 로 재생성
 *.xcodeproj
-
-# Xcode
 xcuserdata/
 DerivedData/
 *.xcresult
 
-# macOS
+# ===== Android (android/) =====
+android/.gradle/
+android/.kotlin/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+android/*.iml
+android/app/*.iml
+android/captures/
+# 업로드 키스토어와 비밀번호 — 절대 커밋하지 않는다
+*.jks
+*.keystore
+android/keystore.properties
+
+# ===== macOS =====
 .DS_Store

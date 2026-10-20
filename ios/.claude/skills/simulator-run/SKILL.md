@@ -15,7 +15,7 @@ description: 시뮬레이터에 앱 빌드·설치·실행하고 스크린샷으
 
 **호출 방법**: `/simulator-run` 또는 "시뮬레이터 실행해줘"
 
-**전제**: `export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`
+**전제**: `cd ios` 후 `export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`
 
 ---
 

@@ -1,70 +1,46 @@
 # CLAUDE.md
 
-이 파일은 Claude Code가 이 리포지토리에서 작업할 때 참고하는 핵심 가이드입니다.
+이 파일은 Claude Code가 이 저장소(하상원의 달력 — iOS + Android)에서 작업할 때 참고하는 루트 가이드입니다.
+플랫폼별 상세 규칙은 각 폴더의 CLAUDE.md 에 있습니다.
 
-> **상세 가이드**: `.claude/rules/` 필요 시 참조
+## 저장소 구조 (모노레포)
 
-## 기본 원칙
+| 폴더       | 내용                                                                                             | 상세 가이드         |
+| ---------- | ------------------------------------------------------------------------------------------------ | ------------------- |
+| `ios/`     | SwiftUI + SwiftData + WidgetKit 앱 — App Store 배포 중                                           | `ios/CLAUDE.md`     |
+| `android/` | Kotlin + Jetpack Compose + Glance 앱                                                             | `android/CLAUDE.md` |
+| `common/`  | 두 플랫폼이 같은 값을 봐야 하는 것 — 공휴일 데이터, 테스트 기대값, 백업 형식 명세, 색 토큰·아이콘 원본, 스토어 자산, 문서 | `common/README.md`  |
+| `docs/`    | 개인정보 처리방침 — 스토어에 등록한 URL 이 이 경로를 가리키므로 **옮기지 않는다**                 |                     |
 
-- **언어**: 한국어 사용 (커밋 메시지는 영어, Conventional Commits)
-- **커밋**: Co-Authored-By 등 AI 서명 금지 (`.claude/skills/commit-message` 참조)
+`common/` 에는 두 언어가 함께 컴파일하는 코드는 없다. Swift 와 Kotlin 은 각자 구현하고,
+결과가 같아야 하는 것만 common 의 데이터·기대값·명세로 묶는다.
+
+## 공통 원칙
+
+- **언어**: 대화·문서는 한국어, 코드·커밋은 영어 (Conventional Commits — `.claude/skills/commit-message`)
+- **커밋**: 사용자 승인 후. Co-Authored-By 등 AI 서명 금지. 원격 push 는 별도 승인 (`.claude/skills/git-push`)
 - **우선순위**: 기존 패턴 준수 > 일관성 > 새 기술 도입
+- **플랫폼 동등성**: 사용자가 보는 동작과 문구는 두 플랫폼이 같아야 한다.
+  한쪽에만 기능을 넣으면 `common/docs/parity.md` 에 다른 쪽 작업 항목을 남긴다
 
-## 핵심 스택
+## 두 플랫폼이 함께 지켜야 하는 것
 
-- **SwiftUI + SwiftData** (iOS 17+)
-- **WidgetKit** — 홈 화면 위젯 (Small/Medium/Large)
-- **XcodeGen** — `project.yml`이 프로젝트 원본. `.xcodeproj`는 생성물이라 git 무시
-- 로그인 없음 (추후 카카오 로그인 예정. Apple 로그인은 유료 계정 문제로 보류)
+| 항목                                   | 원본                              | 규칙                                                                                                                                      |
+| -------------------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| 한국 공휴일 확정 테이블                | `common/data/korean-holidays.json` | Android 는 이 파일을 assets 로 읽는다. iOS 는 아직 `ios/Shared/Sources/KoreanHolidays.swift` 에 같은 표가 있어 **수정 시 양쪽 동시 수정** |
+| 공휴일 자동 계산·음력 환산·반복 판정   | 각 플랫폼 코드                    | 기대값은 `common/fixtures/` — 규칙을 바꾸면 기대값도 갱신하고 양쪽 테스트를 돌린다                                                        |
+| 백업 파일 `.hscal`                     | `common/spec/backup-format.md`    | 필드명·원시 문자열·날짜 인코딩(Swift 기준시 초)을 바꾸지 않는다. 양쪽에서 서로의 파일을 읽을 수 있어야 한다                                 |
+| 설정 키·enum 원시값                    | 각 플랫폼 코드                    | 이름을 같게 유지 (`theme.primaryColor`, `"weekly"` 등) — 두 코드를 나란히 읽기 위해                                                        |
+| 색 팔레트                              | `common/design/colors.json`       | 변경 시 양쪽 반영                                                                                                                         |
+| 사용자 노출 문구                       | 각 플랫폼 코드                    | 같은 기능은 같은 문구. 플랫폼 고유 명칭만 다르다 (예: "애플 달력" ↔ "안드로이드 달력")                                                     |
 
-## 빌드 및 개발 명령어
+## 문서 위치
 
-```bash
-# xcode-select가 CLT를 가리키는 환경이면 항상 먼저:
-export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-
-xcodegen generate     # project.yml 변경 후 .xcodeproj 재생성 (필수)
-
-# 빌드 확인 전용 (설치 안 함)
-xcodebuild -project PlanWidget.xcodeproj -scheme PlanWidget \
-  -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
-
-# 시뮬레이터 실행: .claude/skills/simulator-run 참조
-```
-
-- ⚠️ **project.yml 수정 후 `xcodegen generate` 필수** — 안 하면 Xcode 프로젝트에 반영 안 됨
-- ⚠️ **시뮬레이터에 설치하는 빌드는 반드시 서명 빌드** (`project.yml`에 `DEVELOPMENT_TEAM` 설정됨, `CODE_SIGNING_ALLOWED=NO` 금지)
-  - 무서명 빌드는 App Group 권한이 빠져 앱·위젯 데이터가 분리되고, 서명 빌드 위에 덮어 설치하면 **App Group 컨테이너가 삭제됨**
-  - `CODE_SIGNING_ALLOWED=NO`는 설치 없이 빌드만 확인할 때(`generic/platform=iOS Simulator`)만 사용
-
-## 타깃 / 번들 구조
-
-| 타깃                  | 번들 ID                          | 소스                             |
-| --------------------- | -------------------------------- | -------------------------------- |
-| `PlanWidget` (앱)     | `com.hasangwon.planwidget`        | `App/Sources` + `Shared/Sources` |
-| `PlanWidgetExtension` | `com.hasangwon.planwidget.widget` | `Widget/Sources` + `Shared/Sources` |
-
-- ⚠️ 위젯 번들 ID는 **앱 번들 ID의 prefix 확장**이어야 함 (아니면 임베드 에러)
-- `Shared/Sources`는 프레임워크가 아니라 **양쪽 타깃에 중복 컴파일**됨 — 앱 전용 API 사용 금지
-
-## 데이터 (SwiftData + App Group)
-
-- 모델: `Schedule` (제목/메모/날짜/시간 유무/반복/색상)
-- 반복: `Recurrence` — 단일(none)/매주(weekly)/매달(monthly). 발생 판정은 `Schedule.occurs(on:)`
-- 저장소: `ScheduleStore.makeContainer()` — **App Group(`group.com.hasangwon.planwidget`) 우선, 엔타이틀먼트 없으면 로컬 폴백**
-- ⚠️ 폴백 상태에선 앱↔위젯 데이터가 분리됨 (무서명 빌드 설치 시 발생 — 위 빌드 규칙 참조)
-- 일정 변경 후 `WidgetCenter.shared.reloadAllTimelines()` 호출 필수
-- App Group ID 변경 시 `Shared/Sources/SharedConstants.swift` + `project.yml` 두 곳 동시 수정
-
-## 브랜치 / 배포
-
-- 단일 `main` 브랜치 (개인 프로젝트). 원격 push 전 사용자 확인
-- 배포(TestFlight/App Store)는 미정 — 유료 개발자 계정 등록 후 진행
-
-## 문서 구조
-
-| 폴더              | 용도                                             |
-| ----------------- | ------------------------------------------------ |
-| `.claude/rules/`  | 아키텍처 패턴, Swift 코딩 컨벤션                 |
-| `.claude/agents/` | code-reviewer, swiftui-dev                       |
-| `.claude/skills/` | commit-message / git-push / build-check / simulator-run |
+| 경로                              | 용도                                      |
+| --------------------------------- | ----------------------------------------- |
+| `common/docs/requirements.md`     | 요구사항 원문 정리 (iOS 1차 개발 당시)    |
+| `common/docs/decisions.md`        | 제품·구조 결정 기록                       |
+| `common/docs/parity.md`           | 기능별 플랫폼 구현 현황                   |
+| `common/docs/play-console.md`     | Play 스토어 등록 절차                     |
+| `.claude/skills/`                 | 저장소 공용 스킬 (commit-message, git-push) |
+| `ios/.claude/`, `android/.claude/` | 플랫폼별 규칙·에이전트·스킬               |

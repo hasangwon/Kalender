@@ -15,7 +15,7 @@ description: Swift 타입체크 + xcodegen + 시뮬레이터 빌드 검증. '/bu
 
 **호출 방법**: `/build-check` 또는 "빌드 체크해줘"
 
-**전제**: `export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`
+**전제**: `cd ios` 후 `export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`
 
 ---
 
@@ -34,7 +34,7 @@ xcodegen generate
 ```bash
 SDK=$(xcrun --sdk iphonesimulator --show-sdk-path)
 xcrun swiftc -typecheck -target arm64-apple-ios17.0-simulator -sdk "$SDK" \
-  App/Sources/PlanWidgetApp.swift App/Sources/Views/*.swift \
+  App/Sources/*.swift App/Sources/Backup/*.swift App/Sources/Views/*.swift \
   Shared/Sources/*.swift Shared/Sources/Models/*.swift Shared/Sources/Store/*.swift
 
 xcrun swiftc -typecheck -target arm64-apple-ios17.0-simulator -sdk "$SDK" -parse-as-library \

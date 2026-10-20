@@ -1,0 +1,48 @@
+{
+  "_comment": "앱 색 토큰. 원본은 ios/Shared/Sources/AppTheme.swift, ColorTag.swift 의 값(0~1 실수)을 8비트 hex 로 옮긴 것. Android 는 android/.../shared/AppTheme.kt, ColorTag.kt 에 같은 값을 둔다. 바꾸면 세 곳을 함께 고친다.",
+  "colorTag": {
+    "_comment": "일정 색 팔레트 8색. 라이트/다크 공통",
+    "red": "#E25A52",
+    "orange": "#EC9043",
+    "yellow": "#E5BA43",
+    "green": "#73A965",
+    "teal": "#4DA29D",
+    "blue": "#5587CE",
+    "purple": "#9276C7",
+    "pink": "#E582A3"
+  },
+  "themeColor": {
+    "_comment": "설정 > 테마색 9종. 기본 gold. { light, dark }",
+    "gold": { "light": "#AF842F", "dark": "#C89E52" },
+    "blue": { "light": "#3182F6", "dark": "#5B9CF8" },
+    "indigo": { "light": "#5A65E8", "dark": "#7E88F1" },
+    "teal": { "light": "#0D9692", "dark": "#47B3AF" },
+    "green": { "light": "#169651", "dark": "#4AB679" },
+    "orange": { "light": "#ED821B", "dark": "#F69B42" },
+    "pink": { "light": "#E6518B", "dark": "#F176A5" },
+    "purple": { "light": "#8B5CE6", "dark": "#AB85F1" },
+    "charcoal": { "light": "#3B4352", "dark": "#96A0B1" }
+  },
+  "backgroundColor": {
+    "_comment": "설정 > 배경색 8종. 기본 gray. ink·blackGold 는 앱 전체를 다크로 강제(forcesDark). 다크 모드에서 나머지는 darkFallback 을 쓴다",
+    "gray": "#F8F9FA",
+    "cream": "#FEF9F3",
+    "pink": "#FEF8F9",
+    "blue": "#F6F9FE",
+    "green": "#F7FBF8",
+    "lavender": "#FAF8FE",
+    "ink": "#1E1F22",
+    "blackGold": "#12100D",
+    "darkFallback": "#1B1C1F",
+    "forcesDark": ["ink", "blackGold"]
+  },
+  "fixed": {
+    "holidayRed": { "light": "#DD3E3E", "dark": "#EF6969" },
+    "accent": { "light": "#4A6B5D", "dark": "#8FB3A3" },
+    "surface": { "light": "#FFFFFF", "dark": "#2B2D31" }
+  },
+  "defaults": {
+    "eventColor": { "none": "blue", "weekly": "green", "monthly": "orange" },
+    "anniversaryColor": "pink"
+  }
+}
